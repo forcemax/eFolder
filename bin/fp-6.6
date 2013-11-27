@@ -1,0 +1,2511 @@
+#!/usr/local/bin/perl -X
+
+# Update note: 6.6
+#  - MAC OSX 10.6.x (snow leopard) support.  grep Encode::
+#  - add: User-Agent: header
+#  - debug: MakeDirectoryAll is now working at server (fix at server)
+#  - fix 6.5 to work with public release
+#  - add: default values for fp config
+#  - debug:  {1} print issue
+#  - debug:  add fp config port handling.
+#  - drop: innomp3 related code
+
+#------------------------------------------------------------------------------
+# This is FP.
+# It is a command line shell interface between FolderPlus (Embian eFolder) 
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+# Author: Jae-Jun Hwang <jaejunh@embian.com>
+# 
+#i Thanks to   Jae-Sung Lee! 
+#
+# Patches and problem reports are welcome.
+#
+# The latest version of this program is available at:
+#   http://www.embian.com/
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+#Index of packages in this file
+#
+#	package FP::RESOURCE_ENG;
+#	package FP::CONFIG;
+#	package EFTP;
+#	package FP;
+#------------------------------------------------------------------------------
+
+#
+package FP::RESOURCE_ENG;
+use strict;
+
+BEGIN {
+	use Exporter();
+
+	use vars qw(@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
+
+	@ISA =  qw(Exporter);
+	@EXPORT = qw(&GREETING  &OSError 
+	&EXIT_OK
+	&EXIT_ERROR
+	&AuthenticationFail  &CreateSessionFail &SessionNotFound  
+	&UnknownError 
+	&EmptyData 
+	&MailSystemError 
+	&VersionConflict 
+	&FileSystemError 
+	&UserProfileNotFound 
+	&ChangePasswordFail 
+	&PermissionDenied 
+	&VetoedWord
+	&NotEnoughMoney
+	&CreateHomeError
+	&IconvFail
+	&ExceedMaxCount
+	&MismatchPassword
+	&MismatchIdentity
+	&GetErrorString
+	);
+}
+
+use subs @EXPORT_OK;
+
+sub EXIT_OK		{ 0; }
+sub EXIT_ERROR		{ 1; }
+sub GREETING		{ return "Hello World";}
+
+
+sub GetErrorString 	{ 
+	my ($errcode) = @_;
+	my %err = (
+ 	1001, "Operatring System Error",
+ 	1002, "Fail to authentication ",
+ 	1003, "Session Data is not found",
+ 	1007, "Unknown Error",
+ 	1008, "There are no data to transfer",
+ 	1009, "Mail System error ",
+ 	1010, "Version Dows not match",
+	1011, "File Service Fail",
+	1012, "User Profile Not Found",
+	1013, "Change Password Fail",
+	1014, "Permission Denied",
+	1015, "The word is Vetoed ",
+	1016, "Not Enough Money",
+	1017, "Home Directory Cannot be Created",
+	1018, "Character Conversion Failed",
+	1019, "Exceed Maximum Mount Count",
+	1021, "Mismtach Password",
+	1022, "No Such User"
+	);
+
+	return ($err{$errcode} ? $err{$errcode} : "Unknown Error");
+}
+
+
+sub OSError		{ return (1001, "Operatring System Error");}
+sub AuthenticationFail	{ return (1002, "Fail to authentication ");}
+sub CreateSessionFail	{ return (1002, "Fail to Create Session");}
+sub SessionNotFound	{ return (1003, "Session Data is not found");}
+#Error Code 4: Communication Error 
+#Error Code 5: Connection Error 
+#Error Code 6: Client Cache Error
+sub UnknownError	{ return (1007, "Unknown Error"); }
+sub EmptyData		{ return (1008, "There are no data to transfer");}
+sub MailSystemError	{ return (1009, "Mail System error ");}
+sub VersionConflict	{ return (1010, "Version Dows not match");}
+sub FileSystemFail	{ return (1011, "File Service Fail");}
+sub UserProfileNotFound	{ return (1012, "User Profile Not Found");}
+sub ChangePasswordFail	{ return (1013, "Change Password Fail");}
+sub PermissionDenied	{ return (1014, "Permission Denied");}
+sub VetoedWord		{ return (1015, "The word is Vetoed ");}
+sub NotEnoughMoney	{ return (1016, "Not Enough Money");}
+sub CreateHomeError	{ return (1017, "Home Directory Cannot be Created");}
+sub IconvFail		{ return (1018, "Character Conversion Failed"); }
+sub ExceedMaxCount	{ return (1019, "Exceed Maximum Mount Count"); }
+
+sub MismatchPassword	{ return (1021, "Mismtach Password"); }
+sub MismatchIdentity	{ return (1022, "No Such User"); }
+
+1;
+
+
+#
+package FP::CONFIG;
+use strict;
+
+BEGIN {
+	use Exporter();
+
+	use vars qw(@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
+	use vars qw($stderr $stdout $stdout_buf $stderr_buf);
+	@ISA =  qw(Exporter);
+	@EXPORT = qw(
+		&CONFIG_FILE
+		&DEFAULT_PORT
+		&SUCCESS
+		&FAIL
+		&NO_ERROR
+		&PROGNAME
+		&HOSTNAME
+		&MAXLIST
+		&BOUNDARY
+		&LOCAL_HOMEDIR
+                &LocalLanguage
+		&OSTYPE
+		&KOREAN
+                &ToUTF8
+                &IsUTF8
+                &ToBYTE
+                &MYCONV
+		&ServerString
+		&SoapString
+		&PostString
+		&PostStringTest
+		&PostURI
+		&do_init
+		&do_log
+		&do_print
+		&do_printerr
+		&mkdir_rec
+		&filesize
+		&filesize_readable
+		&filesize_actual
+		&stdout
+		&stderr
+	);
+}
+
+$stdout_buf = "";
+$stderr_buf = "";
+$stdout = \*STDOUT; 
+$stderr = \*STDERR; 
+
+use subs @EXPORT;
+use POSIX qw(strftime);
+
+BEGIN {
+	import FP::RESOURCE_ENG;
+}
+
+# Win32/Linux Safe!!
+
+if ($] >= 5.008) {
+eval 'use Encode;
+#use Encode::UTF8Mac;
+if ($^O eq "darwin") { eval "use Encode::UTF8Mac;"; }
+sub MYCONV { my ($str,$from,$to) = @_; Encode::from_to($str,$from,$to); $str; }
+sub ToUTF8 { my ($string) = @_; return Encode::decode_utf8($string); }
+sub ToBYTE { my ($string) = @_; return Encode::encode_utf8($string); } 
+sub IsUTF8 { my ($string) = @_;  return Encode::is_utf8($string); }';
+} else {
+	eval 'use Text::Iconv;';
+	if ($@) {
+		die $@;
+	}
+	eval '
+	sub MYCONV { my ($str,$from,$to) = @_; 
+		return Text::Iconv->new($from,$to)->convert($str); };
+
+	sub ToUTF8 { my ($string) = @_; my $buf=$string;
+		#open(MEM,">", \$buf); print MEM $buf; close(MEM);
+        	return pack "U0C*", unpack "C*", $string; }
+
+	sub ToBYTE { my ($string) = @_; 
+		return pack "C*", unpack "U0C*", $string; } 
+	
+	sub IsUTF8 { my ($string) = @_;
+		my $utf8_string = ToUTF8(ToBYTE($string));
+		return $string eq $utf8_string;
+	}';
+}
+
+
+sub Log_Level 		{ return 0; }
+
+sub BOUNDARY		{ return "X" . "u" . "0" . "2" . "=" . "\$"; }
+sub DEFAULT_PORT	{ return 80; }
+sub SUCCESS             { return        1;}
+sub FAIL                { return        0;}
+sub NO_ERROR            { return        2;}
+
+sub MAXLIST		{ return 30; }
+sub CONFIG_FILE 	{ return ".fp"; }
+sub KOREAN 		{ return "CP949"; }
+sub PROGNAME		{ return $0; }
+sub HOSTNAME		{ return $ENV{'HOSTNAME'}; }
+
+sub OSTYPE		{ $ENV{'OS'} ? $ENV{'OS'} : $ENV{'OSTYPE'}; }
+sub LOCAL_USER		{ OSTYPE =~ /window/i ? $ENV{'USERNAME'} : $ENV{'USER'}; }
+sub LOCAL_HOMEDIR	{ OSTYPE =~ /window/i ? $ENV{'USERPROFILE'} : $ENV{'HOME'}; }
+
+sub LocalLanguage { 
+	if (OSTYPE =~ /window/i) {
+		return KOREAN;
+	}
+	if ($ENV{"LANG"} =~ /(EUC[\-]?KR)$/i) {
+		return KOREAN;
+	} 
+	if ($ENV{"LC_CTYPE"} =~ /(EUC[\-]?KR)$/i) {
+		return KOREAN; 
+	} 
+	if ($ENV{"LC_ALL"} =~ /(EUC[\-]?KR)$/i) {
+		return KOREAN;
+	} 
+	
+	return "UTF-8";
+}
+
+sub ServerString {
+	return "%s";	
+}
+
+
+sub SoapString {
+	if (LocalLanguage eq KOREAN) {
+		return "http://" . ServerString . "/FTPService2";
+	} else {
+		return "http://" . ServerString . "/FTPService";
+	}
+}
+
+sub PostURI {
+	return "/IO/fileIO" . ((LocalLanguage eq KOREAN) ? "EUC" : "") . ".cgi";
+}
+
+sub PostString {
+	my ($server) = @_;
+	return "POST " . PostURI . " HTTP/1.0\r\nHost: $server\r\n";
+}
+
+sub PostStringTest {
+	return "POST /IO/fileIOTest.fcgi HTTP/1.1\r\nHost:debtest.folderplus.com\r\n";
+}
+
+
+sub filesize; *filesize = \&filesize_readable; 
+
+sub filesize_readable {
+	my ($size) = @_;
+	if ($size < 1024) { return sprintf("%5d ", $size); } 
+	$size /= 1024; if ($size < 1024) { return sprintf("%5dK", $size); }
+	$size /= 1024; if ($size < 1000) { return sprintf("%5.1fM", $size); }
+	$size /= 1024; if ($size < 1000) { return sprintf("%5.1fG", $size); }
+	$size /= 1024; return sprintf("%5.1fT", $size);
+}
+
+sub filesize_actual {
+	my ($size) = @_;
+	return sprintf("%10d", $size);
+}
+
+sub mkdir_rec{
+        my($strTargetPath) = @_;
+
+# Recursive MakeDirectory
+# $strRealPath = "/afs/soribada.com/eFolder/Public71/embian4/tin03/a/b/c";
+        #print STDERR  "JJHWANG2:FileSystem.pm: $strTargetPath\n";
+
+
+        my @dir = split(/\//, $strTargetPath);
+        my $prefix = $dir[0];
+
+        for (my $i=1; $i <= $#dir; $i++) {
+                my $cur_dir =  $prefix . "/" . $dir[$i];
+                my $nResult = 1;
+                $nResult = mkdir $cur_dir if (! -d $cur_dir);
+                #do_log(2,sprintf("mkdir($cur_dir)=$nResult"));
+                if (!$nResult) {
+                        return FAIL;
+                }
+                $prefix =  $cur_dir;
+        }
+        return SUCCESS;
+}
+
+
+sub stdout {
+	return $stdout;
+}
+
+sub stderr {
+	return $stderr;
+}
+
+sub do_init {
+	my ($stdout_handle,$stderr_handle) = @_;
+	
+	if ($stdout_handle) {
+		$stdout = $stdout_handle;
+	}
+
+	if ($stderr_handle) {
+		$stderr = $stderr_handle;
+	}
+}
+
+
+sub do_log {
+        my ($log_level, $strLog) = @_;
+        my $cur_time = strftime("%m-%d %H:%M:%S", localtime());
+        my $PROGNAME = PROGNAME;
+        my $HOSTNAME = HOSTNAME;
+        if ($log_level <= Log_Level) {
+                print $stderr sprintf("[%s] $HOSTNAME $PROGNAME:", $cur_time);
+                print $stderr $strLog, "\n";
+        }
+}
+
+sub do_print {
+       my ($strLog) = @_;
+       #use Term::ANSIColor qw(:constants);
+       #print $stdout CYAN .  BOLD . $strLog . RESET, "\n";
+       print $stdout $strLog, "\n";
+}
+
+sub do_printerr {
+        my ($strLog, $err) = @_;
+        my $cur_time = strftime("%m-%d %H:%M:%S", localtime());
+        my $PROGNAME = PROGNAME;
+        my $HOSTNAME = HOSTNAME;
+        print $stderr sprintf("[%s] $HOSTNAME $PROGNAME:[ERROR]:", $cur_time);
+        print $stderr $strLog, "\n";
+        if ($err) {
+                print $stderr sprintf("[%s] $HOSTNAME $PROGNAME:[ERROR]:", $cur_time);
+                my $errcode = $err->faultcode;
+
+                if ($errcode =~ /SOAP-ENV\:([0-9]+)/) {
+                        $errcode=$1;
+                }
+                print $stderr sprintf("----->%s:%s:%s\n",
+                                $errcode,
+                                GetErrorString($errcode),
+                                $err->faultstring);
+        }
+}
+
+1;
+
+
+
+#
+package EFTP;
+use strict;
+
+use MIME::Base64 qw(encode_base64 decode_base64);
+
+BEGIN {
+	use Exporter ();
+    	use vars qw(@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
+    	@ISA = qw(Exporter);
+    	%EXPORT_TAGS = ();
+    	@EXPORT = ();
+    	#@EXPORT_OK = qw(&init &write_log);
+}
+
+
+#use subs @EXPORT_OK;
+
+BEGIN {
+	import FP::RESOUCE_ENG;
+	import FP::CONFIG;
+}
+
+sub FindFiles; *FindFiles = \&FindFiles2;
+
+sub new{
+	my ($class,$soap_server,$log_level) = @_;
+	my $self = ();
+	if (!$soap_server) { die "[ERROR]: soap_server is null\n"; }
+
+	$self->{nErrorCode} = 0;
+	$self->{strError} = 0;
+	$self->{hSoap} = $soap_server ; 
+	
+	$self->{LOG_LEVEL} = (defined($log_level) ? $log_level : 0);
+	bless $self, $class;
+}
+										
+sub EUC2UTF {
+	my ($self, $str) = @_;
+	if (LocalLanguage eq KOREAN) {
+		$str = MYCONV($str, "cp949", "UTF8");
+	} 
+	$str = SOAP::Data->type(string=>$str);
+	return $str;
+}
+
+sub Echo {
+	my ($self, @a) = @_;
+	@a=map { $_ = $self->EUC2UTF($_); } @a;
+
+	my $result = $self->{hSoap}->echo(@a);
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("Echo", $result);
+                return (-1);
+        }else{
+                my @temp = @{$result->result};
+                my $cnt = @temp;
+		do_log(0, $cnt);
+                return ($cnt, @temp);
+        }
+}
+
+sub Login{
+	my ($self, $ID, $PASS, $VER, $aux) = @_;
+	my ($sessionID, $adultTag);
+
+	my $result; 
+	if ($aux) { 
+		$result =  $self->{hSoap}->Authenticate($ID, $PASS, $VER);
+	} else {
+		#$result =  $self->{hSoap}->Authenticate2($ID, $PASS, $VER);
+		#$result =  $self->{hSoap}->Login($ID, $PASS, $VER);
+		#$result =  $self->{hSoap}->Authenticate3($ID, $PASS, $VER);
+		$result =  $self->{hSoap}->Authenticate($ID, $PASS, "12:34:56:78", "eFolder");
+	}
+	if( $result->fault){
+		do_printerr("Login($ID,$PASS,$VER)", $result);
+		return FAIL;
+	}
+	else{
+		if ($aux) {
+			$sessionID = $result->result;
+		} else {
+			#$adultTag = substr($result->result,0,1);
+			#$sessionID = substr($result->result,1);
+			$sessionID = $result->result;
+		}
+	}
+	
+	print STDERR "$sessionID \n";	
+	
+#	$sessionID = encode_base64($sessionID,"");
+	print STDERR "$sessionID \n";	
+#	return $sessionID;
+
+	return ($adultTag,$sessionID);
+
+}
+
+sub Logout {
+	my ($self, $SESSIONID ) = @_;
+	
+	my $result = $self->{hSoap}->Logout($SESSIONID);
+	if ($result->fault){
+		if ($result->faultcode eq "SOAP-ENV:1008") {
+			return (0);
+		}
+		do_printerr("Logout($SESSIONID)", $result);
+		return FAIL;
+	}
+	return SUCCESS;
+}
+
+sub ListDir{
+	my ($self, $DIR, $SESSIONID ) = @_;
+	
+
+	my $str=$self->EUC2UTF($DIR);
+
+	my $result = $self->{hSoap}->ListDirectory3($str, $SESSIONID);
+	if ($result->fault){
+		if ($result->faultcode eq "SOAP-ENV:1008") {
+			return (0);
+		}
+		do_printerr("ListDirectory($DIR)", $result);
+		return (-1);
+	}else{
+		my @temp = map { if (defined($_->{FileName})) { $_->{Name} = $_->{FileName}; }; $_; } @{$result->result};
+		my $cnt = @temp;
+		return ($cnt, @temp);
+	}
+}
+
+sub ChangePassword{
+        my ($self, $NewPass, $SESSIONID ) = @_;
+
+	$NewPass=$self->EUC2UTF($NewPass);
+
+        my $result = $self->{hSoap}->ChangePassword($NewPass, $SESSIONID);
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("ChangePassword($NewPass)", $result);
+                return FAIL;
+        }
+	return SUCCESS;
+}
+
+
+sub ListDirTest{
+        my ($self, $DIR, $SESSIONID ) = @_;
+
+
+        my $str=$self->EUC2UTF($DIR);
+
+        my $result = $self->{hSoap}->ListDirectoryTest($str, $SESSIONID);
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("ListDirectory($DIR)", $result);
+                return (-1);
+        }else{
+                my @temp = @{$result->result};
+                my $cnt = @temp - 1;
+                return ($cnt, @temp);
+        }
+}
+
+
+sub GetMountList{
+        my ($self, $SESSIONID ) = @_;
+
+        my $result = $self->{hSoap}->GetMountList($SESSIONID);
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("GetMountList()", $result);
+                return (-1);
+        }else{
+                my @temp = @{$result->result};
+                my $cnt = $#temp;
+                return ($cnt, @temp);
+        }
+}
+
+
+sub Mount{
+        my ($self, $strMount, $SESSIONID ) = @_;
+	$strMount=$self->EUC2UTF($strMount);
+
+        my $result = $self->{hSoap}->Mount($strMount, $SESSIONID);
+        if ($result->fault){
+                do_printerr("Mount($strMount)", $result);
+		return FAIL;
+        }
+	return SUCCESS;
+}
+
+
+sub GetUserProfile{
+        my ($self, $SESSIONID, $aux) = @_;
+  	my $result;
+        if ($aux) {
+        	$result = $self->{hSoap}->GetUserProfile2($SESSIONID);
+        } else {
+                $result = $self->{hSoap}->GetUserProfile($SESSIONID);
+        }
+
+        if ($result->fault){
+                do_printerr("GetUserProfile()", $result);
+                return FAIL;
+        }
+
+#	$result2 = $self->{hSoap}->GetDriveInfo($SESSIONID);
+#        if ($result2->fault){
+#                do_printerr("GetDriveInfo()", $result2);
+#                return FAIL;
+#        }
+        return %{$result->result}; 
+}
+
+
+
+sub UnMount{
+        my ($self, $strMount, $SESSIONID ) = @_;
+	$strMount=$self->EUC2UTF($strMount);
+
+        my $result = $self->{hSoap}->UnMount($strMount, $SESSIONID);
+        if ($result->fault){
+                do_printerr("UnMount($strMount)", $result);
+                return FAIL;
+        }
+        return SUCCESS;
+}
+
+
+
+
+sub MakeDirectoryAll{
+	my ($self,$strNewPath, $SESSIONID) = @_;
+	$strNewPath=$self->EUC2UTF($strNewPath);
+	
+	my $result = $self->{hSoap}->MakeDirectoryAll($strNewPath, $SESSIONID);
+
+	if( $result->fault){
+		do_printerr("MakeDirectoryAll($strNewPath)", $result);
+		return FAIL;
+	}
+
+	return SUCCESS;
+}
+
+sub DeleteDir{
+	my ($self,$strNewPath, $SESSIONID) = @_;
+
+	$strNewPath=$self->EUC2UTF($strNewPath);
+	
+	my $result = $self->{hSoap}->DeleteDirectory($strNewPath, $SESSIONID);
+
+	if( $result->fault){
+		do_printerr("DeleteDir($strNewPath)", $result);
+		return FAIL;
+	}
+	return SUCCESS;
+}
+
+sub Rename{
+	my ($self,$strSrcPath, $strTarPath, $SESSIONID) = @_;
+	
+	$strSrcPath=$self->EUC2UTF($strSrcPath);
+	$strTarPath=$self->EUC2UTF($strTarPath);
+	
+	my $result = $self->{hSoap}->Rename($strSrcPath, $strTarPath, $SESSIONID);
+
+	if( $result->fault){
+		do_printerr("Rename($strSrcPath, $strTarPath)", $result);
+		return FAIL;
+	}
+	return SUCCESS;
+}
+
+sub FindFiles1{
+	my ($self, $strFindName, $nNext, $SESSIONID) = @_;
+	$strFindName=$self->EUC2UTF($strFindName);
+
+	my $result = $self->{hSoap}->FindFiles("Name",$strFindName,$nNext,$SESSIONID);
+
+	if ($result->fault){
+		if ($result->faultcode eq "SOAP-ENV:1008") {
+			return (0);
+		}
+		do_printerr("FindFiles1($strFindName, $nNext)", $result);
+		return (-1);
+	}else{
+		my @temp = @{$result->result};
+		my $cnt = @temp;
+		return ($cnt, @temp);
+	}
+}
+
+sub FindFiles2{
+        my ($self, $strFindName, $nNext, $SESSIONID, $bBlock) = @_;
+        $strFindName=$self->EUC2UTF($strFindName);
+
+        my $result = $self->{hSoap}->FindFiles2("Name",$strFindName,$nNext,$bBlock,$SESSIONID);
+
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("FindFiles2($strFindName, $nNext, $bBlock)", $result);
+                return (-1);
+        }else{
+                my @temp = @{$result->result};
+                my $cnt = @temp;
+                return ($cnt, @temp);
+        }
+}
+
+sub FindFiles3{
+        my ($self, $strFindName, $nNext, $SESSIONID, $bBlock, $filetype) = @_;
+        $strFindName=$self->EUC2UTF($strFindName);
+
+        my $result = $self->{hSoap}->FindFiles3("Name",$strFindName,$nNext,$bBlock,$filetype,$SESSIONID);
+
+        if ($result->fault){
+                if ($result->faultcode eq "SOAP-ENV:1008") {
+                        return (0);
+                }
+                do_printerr("FindFiles3($strFindName, $nNext, $bBlock)", $result);
+                return (-1);
+        }else{
+                my @temp = @{$result->result};
+                my $cnt = @temp;
+                return ($cnt, @temp);
+        }
+}
+
+sub MakeShare{
+	my ($self, $strShareFilePath, $nDownCount, $lDownTimeOut, $strDownPassword, $SESSIONID) = @_;
+
+	$strShareFilePath=$self->EUC2UTF($strShareFilePath);
+
+	my $result = $self->{hSoap}->MakeShare($strShareFilePath,$nDownCount,$lDownTimeOut,$strDownPassword,$SESSIONID);
+
+	if ($result->fault){
+		do_printerr("MakeShare($strShareFilePath,$nDownCount,$lDownTimeOut,$strDownPassword,$SESSIONID)", $result);
+		return FAIL;
+	} else{
+		return $result->result;
+	}
+}
+
+
+sub Finalize {
+	my ($self) = @_;
+}
+1;
+
+
+
+#
+package FP;
+require 5.005;
+use strict;
+
+use URI::Escape qw(uri_escape);
+#use Net::HTTP::NB;
+use Net::HTTP;
+use IO::File;
+use IO::Socket;
+use IO::Select;
+use POSIX qw(ceil floor);
+use Time::HiRes qw( usleep gettimeofday tv_interval time);
+
+#use SOAP::Lite +xmlschema=>"2001",+trace=>"debug";
+#use SOAP::Lite +xmlschema=>"2001";
+
+BEGIN {
+	import FP::RESOURCE_ENG;
+	import FP::CONFIG;
+	import FP::EFTP;
+}
+
+BEGIN {
+        use Exporter();
+
+        use vars qw(@ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $VERSION);
+        use vars qw($stderr $stdout $stdout_buf $stderr_buf);
+        @ISA =  qw(Exporter);
+	@EXPORT = qw(&do_loginit &run_cmd);
+}
+
+use subs @EXPORT;
+
+use vars qw(%G_CONFIG $G_SOAP $VERSION $t0_cmd);
+$VERSION = '6.60';
+%G_CONFIG = ();
+$G_SOAP = "";
+$t0_cmd = 0;
+
+sub fp_down; *fp_down = \&fp_downlink;
+sub fp_up; *fp_up = \&fp_invalid_cmd;
+
+sub fp_invalid_cmd {
+	my (@arg) = @_;
+	do_log("I am sorry!  command '$arg[0]' is not support for MSN mode");
+	return FAIL;
+}
+
+
+sub fp_serialize {
+	my (@arg) = @_;
+	my $buf = "";
+	
+
+	#return join(";", @arg);
+	return sprintf("%s;%s;%s;%s", @arg);
+}
+
+sub fp_deserialize {
+	my ($arg, @rest) = @_;
+	return split(/\;/, $arg);
+}
+
+
+sub fp_init {
+	if ($G_SOAP) {
+		return $G_SOAP;
+	}
+	my $strServer = $G_CONFIG{'soap_server'};
+	if ($strServer eq "") {
+		$strServer = $G_CONFIG{'server'};
+	} 
+
+	if (!defined($G_CONFIG{'port'}) || $G_CONFIG{'port'} eq "") {
+		$G_CONFIG{'port'} = DEFAULT_PORT;
+	} 
+
+	if (!defined($G_CONFIG{'order'}) || $G_CONFIG{'order'} eq "") {
+		$G_CONFIG{'order'} = "asc";
+	} 
+
+	if (!defined($G_CONFIG{'sort'}) || $G_CONFIG{'sort'} eq "") {
+		$G_CONFIG{'sort'} = "name";
+	} 
+
+	if (!defined($G_CONFIG{'filename'}) || $G_CONFIG{'filename'} eq "") {
+		$G_CONFIG{'filename'} = "actual";
+	} 
+	my $strService = sprintf(SoapString,$strServer . ":" . $G_CONFIG{'port'});
+	if ($G_CONFIG{'trace'} =~ /^yes/i) {
+		eval "use SOAP::Lite +xmlschema=>'2001', +trace=>'debug';";
+	} else {
+		eval "use SOAP::Lite +xmlschema=>'2001';";
+	}
+
+	if ($G_CONFIG{'filesize'} =~ /^actual/i) {
+		eval '*filesize = \&filesize_actual;';
+	} else {
+		eval '*filesize = \&filesize_readable;';
+	}
+
+	if ($G_CONFIG{'speed_limit'} !~ /^[248]$/) {
+		$G_CONFIG{'speed_limit'} = 10;
+	}
+print STDERR $strService."\n";
+	my $hService = SOAP::Lite->uri($strService)->proxy($strService); 
+	$G_SOAP = new EFTP($hService);
+	return $G_SOAP;
+}
+
+
+###########################################################################
+# CONFIG Module?
+###########################################################################
+sub fp_rmlist {
+	my ($cmd, @arg) = @_;
+	
+	foreach my $i (keys %G_CONFIG) {
+		if ($i =~ /^\{/) {
+			delete($G_CONFIG{$i});
+		}
+	}
+	return SUCCESS;
+}
+
+sub fp_openconfig {
+	my $config_file = LOCAL_HOMEDIR . "/" . CONFIG_FILE;
+	if (!open(INFILE, "<", $config_file)) {
+		do_log(0, "Cannot Open '$config_file'. Please Create config file by 'fp config ..'");
+		return FAIL;
+	}
+	if (LocalLanguage ne KOREAN) {
+		if ($] < 5.008) {
+			binmode INFILE;
+		} else {
+			binmode INFILE, ":utf8";
+		}
+	}
+        while (my $line = <INFILE>) {
+                $line =~ s/\n//g;
+                my ($field, $value) = split(/\=/, $line);
+		#print STDERR "$field=", length($value), $value, "\n";
+                $G_CONFIG{$field} = $value;
+        }
+        close(INFILE);
+	return SUCCESS;
+}
+
+
+sub fp_writeconfig {
+	my $config_file = LOCAL_HOMEDIR . "/" . CONFIG_FILE;
+	if (!open(OUTFILE, "> $config_file")) {
+		do_log(0, "Cannot Write '$config_file'.");
+		return FAIL;
+	}
+	if (LocalLanguage ne KOREAN) {
+		if ($] < 5.008) {
+			binmode OUTFILE;
+		} else {
+			binmode OUTFILE, ":utf8";
+		}
+	} else {
+		binmode OUTFILE;
+	}
+	foreach my $field (sort { $a cmp $b; } keys %G_CONFIG) {
+		if ($field =~ /^[a-zA-Z\{]/ && $G_CONFIG{$field} ne "") {
+			print OUTFILE sprintf("%s=%s\n", $field, $G_CONFIG{$field});
+			#print $G_CONFIG{$field}, "\n";
+		}
+	}
+	close(OUTFILE);
+	return SUCCESS;
+}
+
+sub fp_login {
+	my ($cmd, @arg) = @_;
+	my $objEFTP = fp_init();
+	my ($adultTag, $strSessionID) = $objEFTP->Login($G_CONFIG{'login'},
+				$G_CONFIG{'password'},
+				"10.0",
+				$G_CONFIG{'site'} eq "soribada");
+	if ($strSessionID) {
+		fp_rmlist("fp_login");
+
+		$G_CONFIG{'pwd'} = $G_CONFIG{'login'} . ":/";
+		$G_CONFIG{'session'} = $strSessionID;
+		$G_CONFIG{'adult'} = $adultTag;
+		
+		do_print("[$G_CONFIG{'site'}]:User $G_CONFIG{'login'} Login Successful.  Adult: $adultTag $strSessionID Time:" . tv_interval($t0_cmd));
+		return SUCCESS;
+	}
+	return FAIL;
+}
+
+
+sub fp_logout {
+        my ($cmd, @arg) = @_;
+        my $objEFTP = fp_init();
+        my $result = $objEFTP->Logout($G_CONFIG{'session'});
+
+        if ($result) {
+                do_print("Logout successful!");
+                return SUCCESS;
+        }
+        do_print("Logout Failed!\t\tTime:" . tv_interval($t0_cmd));
+        return FAIL;
+} 
+
+sub dir_sort {
+	my $ret=0;
+	my $one="";
+	my $two="";
+
+	if ($G_CONFIG{'sort'} eq "size") {	
+		$two =sprintf("%9s%10d", $b->{FileType}, $b->{FileSize});
+		$one =sprintf("%9s%10d", $a->{FileType}, $a->{FileSize});
+	} elsif ($G_CONFIG{'sort'} eq "time") { 
+		my ($y,$m,$d,$h,$mn,$s) = split(/[\-\: ]/, $b->{ModifyTime});
+        	my $b_time = sprintf("%02d-%02d %02d:%02d", $m, $d, $h, $mn);
+		$two=sprintf("%9s%20s",$b->{FileType},$b_time);
+
+		($y,$m,$d,$h,$mn,$s) = split(/[\-\: ]/, $a->{ModifyTime});
+        	my $a_time = sprintf("%02d-%02d %02d:%02d", $m, $d, $h, $mn);
+		$one=sprintf("%9s%20s",$a->{FileType},$a_time);
+	} else {  # name sort
+		$two=sprintf("%9s%s",$b->{FileType},$b->{Name});
+		$one=sprintf("%9s%s",$a->{FileType},$a->{Name});
+	}
+
+	if ($G_CONFIG{'order'} eq "dsc") {
+		$ret = $two cmp $one;
+	} else {
+		$ret = $one cmp $two;
+	} 
+	$ret;
+}
+
+sub fp_lsmount {
+	my ($cmd, @arg) = @_;
+ 	my $objEFTP = fp_init();
+        # relative path to fullpath
+        my ($cnt, @arrMountList) = $objEFTP->GetMountList($G_CONFIG{'session'});
+        if ($cnt < 0) {
+                do_log(0, "Error Calling GetMountList!\n");
+                return FAIL;
+        }
+
+        do_print("-" x79);
+        do_print("total $cnt\t\tTime:" . tv_interval($t0_cmd));
+
+        fp_rmlist("fp_ls");
+	shift(@arrMountList);
+
+        $cnt = 0;
+        my $temp;
+        foreach $temp (sort { $a->{VolumeName} cmp $b->{VolumeName} } @arrMountList) {
+		my ($id) = sprintf("{%02d}", ++$cnt);
+		my $dir = "$temp->{VolumeName}:/";
+		do_print(sprintf("%s %10s %s", $id, $temp->{VolumeType} == 8 ? "[PASSWORD]" : "", $dir));
+   		$G_CONFIG{$id} = fp_serialize("lsmount",
+			 $temp->{VolumeSize}, $temp->{VolumeType}, $dir);
+	}
+	return SUCCESS;
+}
+
+sub fp_mkmount {
+	my ($cmd, @arg) = @_;
+	my $mount = $arg[0];
+	if ($mount =~ /^\{[0-9]+\}$/) {
+		my ($type, $filesize, $dirflag, $fullpath) = fp_deserialize($G_CONFIG{$mount});
+		$mount = $fullpath;
+	}
+	$mount =~ s/^([^\:]+)(\:\/.*)/$1/;
+	if ($mount eq "") {
+		do_printerr("You need to give id:/ as arg1!\n");
+		return FAIL; 
+	}
+ 	my $objEFTP = fp_init();
+        if (! $objEFTP->Mount($mount,$G_CONFIG{'session'})) {
+		do_print("Error Calling Mount!\n");
+		return FAIL;
+	}
+        do_print("mkmount successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+sub fp_rmmount {
+	my ($cmd, @arg) = @_;
+	my $mount = $arg[0];
+	if ($mount =~ /^\{[0-9]+\}$/) {
+		my ($type, $filesize, $dirflag, $fullpath) = fp_deserialize($G_CONFIG{$mount});
+		$mount = $fullpath;
+	}
+	$mount =~ s/^([^\:]+)(\:\/.*)/$1/;
+	if ($mount eq "") {
+		do_printerr("You need to give id:/ as arg1!\n");
+		return FAIL;
+	}
+ 	my $objEFTP = fp_init();
+        if (! $objEFTP->UnMount($mount,$G_CONFIG{'session'})) {
+		do_print("Error Calling UnMount!\n");
+		return FAIL;
+	}
+        do_print("rmmount successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+sub fp_profile {
+	my ($cmd, @arg) = @_;
+ 	my $objEFTP = fp_init();
+        my (%profile) = $objEFTP->GetUserProfile($G_CONFIG{'session'});
+
+	if (!%profile) {
+		do_print("Error Calling GetUserProfile!\n");
+		return FAIL;
+	}
+	
+	my @sharetype = ("[?]", "Public", "Private", "Protected");
+	do_print(sprintf("$G_CONFIG{login}: Coin: %d   Mileage: %d   Today Charge: %d   ShareType: [%s]   Time:[%f]", 
+			$profile{"Coin"},
+			$profile{"Mileage"},
+			$profile{"TodayCharge"},
+			$sharetype[$profile{"ShareType"}],
+			tv_interval($t0_cmd)));
+	return SUCCESS;
+}
+
+
+sub fp_echo {
+        my ($cmd, @arg) = @_;
+        my $objEFTP = fp_init();
+        my ($i, @result) = $objEFTP->Echo(@arg);
+
+        if ($i < 1) {
+                do_print("Error Calling Echo!\n");
+                return FAIL;
+        }
+	for ($i=0; $i <= $#result; $i++) {
+		print $i, ":", $result[$i], ",", length($result[$i]), "\n";
+	}
+        do_print("echo successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+
+sub fp_ls {
+	my ($cmd, @arg) = @_;
+	my $objEFTP = fp_init();
+	# relative path to fullpath
+	my $dir = fp_getfullpath($arg[0]);
+	my ($cnt, @arrDirList) = $objEFTP->ListDir($dir, $G_CONFIG{'session'});
+	if ($cnt < 0) {
+		do_printerr("Error Calling ListDirectory!");
+		return FAIL;
+	} 
+		
+	do_print("-" x79);
+  	do_print("total $cnt\t\tSort by $G_CONFIG{'sort'} [$G_CONFIG{'order'}] [$G_CONFIG{'filesize'}]  Time: " . tv_interval($t0_cmd) );
+        do_print(sprintf("{00} %s\t%s\n", "../", $dir));
+	
+	fp_rmlist("fp_ls");
+
+	$cnt = 0;
+	my $temp;
+        foreach $temp (sort dir_sort @arrDirList) { 
+		my $fullpath = "";
+		my $dirflag =  $temp->{FileType} eq "Directory";
+		
+		if (LocalLanguage ne KOREAN) {  
+			if (!IsUTF8($temp->{Name})) {
+				#	print "IsUTF8 NOT temp->{Name}\n";
+				$temp->{Name} = ToUTF8($temp->{Name});
+			}
+		}
+		$temp->{Name} =~ s/ $//g;
+		
+		my ($y,$m,$d,$h,$mn,$s) = split(/[\-\: ]/, $temp->{ModifyTime});
+		my ($id) = sprintf("{%02d}", ++$cnt);
+                do_print(sprintf("%s %s %s %s\t%s",
+			$id,
+                	$dirflag ? "dir" : "   ",
+			filesize($temp->{FileSize}),
+			sprintf("%02d-%02d %02d:%02d", $m, $d, $h, $mn),
+			$dirflag ? $temp->{Name} . "/" : $temp->{Name}));
+
+		if ($dir =~ /\/$/) {
+                       	$fullpath = sprintf("%s%s", $dir,$temp->{Name});
+               	} else {
+                       	$fullpath = sprintf("%s/%s", $dir,$temp->{Name});
+               	}
+
+		$G_CONFIG{$id} = fp_serialize("ls",
+   			$temp->{FileSize},$temp->{FileType},$fullpath);
+
+	}
+	do_print("-" x79);
+	$G_CONFIG{'ls_count'} = $cnt;
+	return SUCCESS;
+}
+
+
+sub fp_ls_recursive {
+        my ($cmd, @arg) = @_;
+        my $t0 = [ gettimeofday ];
+        my $objEFTP = fp_init();
+	my $dir = $arg[0];
+        # relative path to fullpath
+
+        my ($cnt, $timestr, @arrDirList) = $objEFTP->ListDirTest($dir, $G_CONFIG
+{'session'});
+        if ($cnt < 0) {
+                do_printerr("Error Calling ListDirectory!");
+                return FAIL;
+        }
+        my $sec = tv_interval($t0);
+        if (! $timestr->{Name}) {
+                $timestr->{Name} = "Empty Data";
+        }
+        do_log(0,sprintf("$dir,$cnt,%.2f,$timestr->{Name}", $sec));
+
+        $cnt = 0;
+        my $temp;
+        my $biggest_size = 0;
+        foreach $temp (@arrDirList) {
+                my $fullpath = "";
+                my $dirflag =  $temp->{FileType} eq "Directory";
+                $temp->{Name} =~ s/ $//g;
+                if ($dir =~ /\/$/) {
+                        $fullpath = sprintf("%s%s", $dir, $temp->{Name});
+                } else {
+                        $fullpath = sprintf("%s/%s", $dir, $temp->{Name});
+                }
+                if ($dirflag) {
+			fp_ls_recursive($cmd,$fullpath);
+                }
+        }
+        return SUCCESS;
+}
+
+sub fp_lstest_ORIG {
+        my ($cmd, @arg) = @_;
+	my $t0 = [ gettimeofday ];
+        my $objEFTP = fp_init();
+        # relative path to fullpath
+
+	if ($arg[0] eq "") {
+		$arg[0] = $G_CONFIG{'lstest_dir'};
+	}
+        my $dir = fp_getfullpath($arg[0]);
+        my ($cnt, $timestr, @arrDirList) = $objEFTP->ListDirTest($dir, $G_CONFIG{'session'});
+        if ($cnt < 0) {
+                do_printerr("Error Calling ListDirectory!");
+                return FAIL;
+        }
+
+        fp_rmlist("fp_ls");
+
+        $cnt = 0;
+        my $temp;
+	my $biggest_size = 0;
+	$G_CONFIG{'lstest_dir'} = $dir;
+
+        foreach $temp (sort dir_sort @arrDirList) {
+                my $fullpath = "";
+                my $dirflag =  $temp->{FileType} eq "Directory";
+                $temp->{Name} =~ s/ $//g;
+
+                my ($y,$m,$d,$h,$mn,$s) = split(/[\-\: ]/, $temp->{ModifyTime});
+                my ($id) = sprintf("{%02d}", ++$cnt);
+                if ($dir =~ /\/$/) {
+                        $fullpath = $dir . $temp->{Name};
+                } else {
+                        $fullpath = $dir . "/" . $temp->{Name};
+                }
+
+                $G_CONFIG{$id} = fp_serialize("ls",
+                        $temp->{FileSize},$temp->{FileType},$fullpath);
+		if ($dirflag) {
+			if ($biggest_size < $temp->{FileSize}) {
+				$G_CONFIG{'lstest_dir'}  = $fullpath;
+				$biggest_size = $temp->{FileSize};
+			}
+		}
+        }
+        $G_CONFIG{'ls_count'} = $cnt;
+	my $sec = tv_interval($t0);
+	if (! $timestr->{Name}) {
+		$timestr->{Name} = "Empty Data";
+	}
+	do_log(0,sprintf("$dir,$cnt,%.2f,$timestr->{Name}", $sec)); 
+        return SUCCESS;
+}
+
+
+sub fp_pwd {
+	my ($cmd, @arg) = @_;
+	do_print($G_CONFIG{'pwd'});
+	return SUCCESS;
+}
+
+
+# cd ..
+# cd {00}
+# cd {01}
+# cd -
+# cd jaejunh:/
+# cd 
+# cd aaaaa
+ 
+sub fp_getfullpath {
+        my ($id) = @_;
+
+        my $dir = "";
+	$id =~ s/\\/\//g;
+
+        if ($id eq "") {
+                $dir = $G_CONFIG{'pwd'};
+        } elsif ($id eq "..") {
+                if ($G_CONFIG{'pwd'} =~ /^[a-zA-Z0-9_]+\:\/$/) {
+                        $dir = $G_CONFIG{'pwd'};
+                } else {
+                        my @mydir = split(/\//, $G_CONFIG{'pwd'});
+                        $dir = join("/", @mydir[0..$#mydir-1]) ."/";
+                }
+        } elsif ($id =~ /^\{([0-9]+)\}$/) {
+		my ($type, $filesize, $dirflag, $fullpath, @other) = fp_deserialize($G_CONFIG{$id});
+		return $fullpath;
+        } elsif ($id eq "-") {
+                $dir = $G_CONFIG{'old_pwd'};
+        } elsif ($id =~ /^[^\:]*$/) {
+                if ($G_CONFIG{'pwd'} =~ /\/$/) {
+                        $dir = $G_CONFIG{'pwd'} . $id;
+                } else {
+                        $dir = $G_CONFIG{'pwd'} . "/" . $id;
+                }
+        } else {
+                $dir = $id;
+        }
+        return($dir);
+}
+
+
+sub fp_getfullpath_reverse {
+	my ($id) = @_;
+
+	$id = fp_getfullpath($id);
+	foreach my $i (sort keys %G_CONFIG) {
+		if ($i =~ /^\{[0-9]+\}$/) {
+			my ($type, $filesize, $dirflag, $fullpath, @other) = fp_deserialize($G_CONFIG{$i});
+			if ($id eq $fullpath) {
+				return $i;
+			} 
+		} 
+	}
+	return FAIL;
+}
+
+
+
+
+sub fp_cd {
+	my ($cmd, @arg) = @_;
+
+	my $objEFTP = fp_init();
+
+	my $dir = fp_getfullpath($arg[0]);
+
+	my ($cnt, @arrDirList) = $objEFTP->ListDir($dir, $G_CONFIG{'session'});
+	if ($cnt < 0) {
+		return FAIL;
+	}
+	
+	$G_CONFIG{'old_pwd'} = $G_CONFIG{'pwd'};
+	$G_CONFIG{'pwd'} = $dir;
+        do_print("change to $dir successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+
+sub fp_mkdir {
+	my ($cmd, @arg) = @_;
+
+	my $objEFTP = fp_init();
+	my $dir = fp_getfullpath($arg[0]);
+
+	my $result = $objEFTP->MakeDirectoryAll($dir, $G_CONFIG{'session'});
+	
+	if ($result) {
+		do_print("make remote directory $dir successful!");
+		return SUCCESS;
+	}
+        do_print("mkdir $dir successful!\t\tTime:" . tv_interval($t0_cmd));
+	return FAIL;
+}
+
+sub fp_rm {
+        my ($cmd, @arg) = @_;
+
+        my $objEFTP = fp_init();
+        my $dir = fp_getfullpath($arg[0]);
+
+        my $result = $objEFTP->DeleteDir($dir, $G_CONFIG{'session'});
+
+        if ($result) {
+                do_print("delete remote $dir successful!");
+		return FAIL;
+        }
+        do_print("rm $dir successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+sub fp_mv {
+        my ($cmd, @arg) = @_;
+
+        my $objEFTP = fp_init();
+        my $from = fp_getfullpath($arg[0]);
+        my $to = fp_getfullpath($arg[1]);
+
+        my $result = $objEFTP->Rename($from, $to, $G_CONFIG{'session'});
+
+        if ($result) {
+                do_print("rename/mv remote from $from to $to successful!");
+		return SUCCESS;
+        }
+        do_print("mv from $from to $to failed!\t\tTime:" . tv_interval($t0_cmd));
+	return FAIL;
+}
+
+sub fp_chpass {
+        my ($cmd, @arg) = @_;
+        my $to = $arg[0];
+
+        if ($to eq "") {
+		do_print("New Password Not Given!");
+                return FAIL;
+        } 
+	if ($to =~ /[^\x09\x0a\x0d\x20-\x7f]/) {
+		do_print("Password must be ascii only!");
+                return FAIL;
+	}
+        my $objEFTP = fp_init();
+
+        my $result = $objEFTP->ChangePassword($to, $G_CONFIG{'session'});
+
+        if ($result) {
+        	$G_CONFIG{'password'} = $to;
+                do_print("change password to $to successful!");
+                return SUCCESS;
+        }
+	return FAIL;
+}
+
+sub fp_find {
+        my ($cmd, @arg) = @_;
+
+	$G_CONFIG{'find'} = $arg[0];
+	$G_CONFIG{'curr'} = 1;
+	return fp_find_display($G_CONFIG{'find'},$G_CONFIG{'curr'});
+	
+	# Save State
+}
+
+sub fp_find_display {
+        my ($word,$curr) = @_;
+        my $objEFTP = fp_init();
+	my $recno = ($curr-1)*MAXLIST;
+	my $bBlock = ($G_CONFIG{'adult'} =~ /^y/i) ? 0 : 1;
+	my $filetype = $G_CONFIG{'filetype'};
+	my @filetype_arr = ("UNKNOWN", "MOV", "MP3", "PIC", "ZIP", "DOC");
+	my $filetype_name = "[Omit:" . $filetype_arr[$filetype] . "]";
+        my ($cnt, @arrFindList);
+
+	if ($G_CONFIG{'site'} eq "soribada") {
+        	($cnt, @arrFindList) = $objEFTP->FindFiles1($word, $recno,
+					$G_CONFIG{'session'}, $bBlock, $filetype);
+	} else {
+        	($cnt, @arrFindList) = $objEFTP->FindFiles($word, $recno,
+					$G_CONFIG{'session'}, $bBlock, $filetype);
+	}
+
+        if ($cnt < 0) {
+                do_printerr("Error Calling find file!");
+                return FAIL;
+        }
+
+	fp_rmlist("fp_find_display");
+	$G_CONFIG{'all'} = $arrFindList[0]->{FileSize};
+	$G_CONFIG{'last'} = ceil($G_CONFIG{'all'}  * 1.0 / MAXLIST);
+
+        do_print("=" x79);
+        do_print(sprintf("Total Number: %02d [ %d / %d ]\tSearch: '$word', $filetype_name Time:%f",
+		$G_CONFIG{'all'}, $curr,$G_CONFIG{'last'}, tv_interval($t0_cmd)));
+        do_print("=" x79);
+
+        my $cnt = 1;
+	shift(@arrFindList);
+        foreach my $hashObj (@arrFindList){
+		my $id = sprintf("{%02d}", $cnt++); 
+		if (LocalLanguage ne KOREAN) {
+			if (!IsUTF8($hashObj->{FilePath})) {
+				$hashObj->{FilePath} = ToUTF8($hashObj->{FilePath});
+			}
+		}
+		$hashObj->{FilePath} =~ s/\\/\//g;
+           	do_print(sprintf("%s %3s %12s %s", $id, 
+			filesize($hashObj->{FileSize}), 
+			$hashObj->{FileOwner}, 
+			$hashObj->{FileName}));
+		$G_CONFIG{$id} = fp_serialize("find",
+				 $hashObj->{FileSize},"File",
+			$hashObj->{FileOwner} . ":" . $hashObj->{FilePath}); 
+        }
+
+        do_print("=" x79);
+        do_print(sprintf("Total Number: %02d [ %d / %d ]\tSearch: '$word',$filetype_name Time:%f",
+		$G_CONFIG{'all'}, $curr,$G_CONFIG{'last'}, tv_interval($t0_cmd)));
+        do_print("=" x79);
+        $G_CONFIG{'curr'} = $curr;
+	return SUCCESS;
+}
+
+sub fp_jump {
+	my ($cmd,$curr,@rest) = @_;
+	if ($curr >= $G_CONFIG{'last'}) {
+		$curr = $G_CONFIG{'last'};
+		do_print("===>you hit last page!<====");
+	} elsif ($curr < 1) {
+		$curr = 1;
+                do_print("===<you hit first page>===!");
+	} 
+
+	return fp_find_display($G_CONFIG{'find'},$curr);
+}
+
+sub fp_detail {
+	my ($cmd,@arg) = @_;
+	my $id = $arg[0];
+
+	if ($G_CONFIG{$id} eq "") {
+		do_print("$id not found!");
+		return FAIL;
+	}
+
+	do_print("=" x79);
+	my ($type, $filesize, $dirflag, $fullpath) = fp_deserialize($G_CONFIG{$id});
+	do_print($fullpath);
+	my @path = split(/\//, $fullpath);
+	for (my $i=0; $i <= $#path; $i++) {
+		if (!$i) {
+			do_print($id . " " . $path[$i] . "\t\t$dirflag\t\tSize:" . $filesize); 
+		} else {
+			do_print("\t*" . "--" x $i . "/" .  $path[$i]); 
+		}
+	}
+        do_print("detail successful!\t\tTime:" . tv_interval($t0_cmd));
+	return SUCCESS;
+}
+
+
+sub fp_up_expand {
+	my ($curr, $h) = @_;
+	my $children;
+	my @newList = ();
+	
+	my @path = split(/\//, $$curr{'fullpath'});
+	my $targetdir = $$curr{'targetdir'} . "/" . $path[$#path];
+	
+	if (fp_mkdir("fp_up_expand", $targetdir) != SUCCESS) {
+		do_log(0, "Fail Creating Directory $targetdir");
+		return \@newList;
+	}
+
+	my $nResult = opendir hDIR, $$curr{'fullpath'};
+        if($nResult == 0){
+                do_log(0, "FileSystem.pm:: ListDirectory is failed : ( " . $$curr{'fullpath'} . $!);
+                return FAIL;
+        }
+
+        while(my $i = readdir(hDIR)){
+		my %foo = ();
+		if ($i =~ /^\./) {
+			next;
+		}
+        	$foo{'fullpath'} = $$curr{'fullpath'} . "/" . $i;
+		$foo{'filesize'} = (stat($foo{'fullpath'}))[7];
+        	$foo{'dirflag'} = -f $foo{'fullpath'} ? "File" : "Directory";
+       		$foo{'targetdir'} = $targetdir;
+		do_log(1,$i);
+		push(@newList, \%foo);
+	}
+	return \@newList;
+}
+
+sub fp_down_expand {
+	my ($curr, $h) = @_;
+	my $children;
+	my @newList = ();
+        my ($cnt, @arrDirList) = $h->ListDir($$curr{'fullpath'}, $G_CONFIG{'session'});
+        if ($cnt < 0) {
+                do_print("Error Calling ListDirectory!\n");
+		return \@newList;
+        }
+
+        #do_print("total $cnt");
+        $cnt = 0;
+        my $temp;
+	my @path = split(/\//, $$curr{'fullpath'});
+	my $targetdir = $$curr{'targetdir'} . "/" . $path[$#path];
+
+	
+	if (mkdir_rec($targetdir) != SUCCESS) {
+		do_print("Fail Creating Directory $targetdir");
+		return \@newList;
+	}
+	
+	foreach $temp (@arrDirList) {
+		my %foo = ();
+		$temp->{Name} =~ s/ $//g;
+		$foo{'filesize'} = $temp->{FileSize};
+		$foo{'dirflag'} = $temp->{FileType};
+		$foo{'fullpath'} = $$curr{'fullpath'} . "/" . $temp->{Name};
+		$foo{'targetdir'} = $targetdir;
+		push(@newList, \%foo);
+	}
+	return \@newList;
+}
+
+
+sub fp_down_rec {
+	my ($curr, $h) = @_;
+
+	if ($$curr{'dirflag'} eq "File") {
+		do_print("==> File " . $$curr{'fullpath'});
+		return fp_down_single_BIO($$curr{'fullpath'}, $$curr{'filesize'},$$curr{'targetdir'});
+	} 
+
+	#do_print("==> Directory " . $$curr{'fullpath'});
+	my $list = fp_down_expand($curr, $h);
+	foreach my $i (@$list) {
+		if (fp_down_rec($i, $h) != SUCCESS) {
+			return FAIL;
+		}
+	}
+	return SUCCESS;
+}
+
+
+sub fp_up_rec {
+        my ($curr, $h) = @_;
+
+        if ($$curr{'dirflag'} eq "File") {
+                #do_print("==> File " . $$curr{'fullpath'});
+                return fp_up_single($$curr{'fullpath'},$$curr{'targetdir'});
+        }
+
+        #do_print("==> Directory " . $$curr{'fullpath'});
+        my $list = fp_up_expand($curr, $h);
+        foreach my $i (@$list) {
+                if (fp_up_rec($i, $h) != SUCCESS) {
+                        return FAIL;
+                }
+        }
+        return SUCCESS;
+}
+
+
+
+
+sub fp_down_interactive {
+	my ($cmd, @arg) = @_;
+	my $from = fp_getfullpath_reverse($arg[0]);
+	my $to = $arg[1] ? $arg[1] : $G_CONFIG{'downdir'};
+	
+	$to = ($to =~ /^(\/|[a-z]\:)/i ? $to : "./" . $to);
+ 	my $objEFTP = fp_init();
+	my %curr;
+	my $type;
+
+	if ($from !~ /^\{[0-9]+\}$/) {
+		do_print("ARG1 '$arg[0]' doesn't exist!");
+		return FAIL;
+	}
+	do_log(0, $from);
+	
+	($type, $curr{'filesize'}, $curr{'dirflag'}, $curr{'fullpath'}) = split(/\;/, $G_CONFIG{$from});
+	$curr{'targetdir'} = $to;
+	#print STDERR "fp_down_interactive=" . length($curr{'fullpath'}) . "\n";
+	return fp_down_rec(\%curr, $objEFTP);
+}
+
+
+sub fp_downlink {
+        my ($cmd, @arg) = @_;
+        my $from = $arg[0];
+        my $objEFTP = fp_init();
+        my %curr;
+        my $type;
+
+        if ($from !~ /^\{[0-9]+\}$/) {
+                do_print("ARG1 is not in {num} format!");
+                return FAIL;
+        }
+
+        ($type, $curr{'filesize'}, $curr{'dirflag'}, $curr{'fullpath'}) = split(/\;/, $G_CONFIG{$from});
+
+
+	if ($curr{'dirflag'} ne "File") {
+                do_print("$curr{'fullpath'} is a 'Directory'!");
+                return FAIL;
+	}
+ 	my $strShareSessionID = $objEFTP->MakeShare($curr{'fullpath'}, 3, 3600, "",$G_CONFIG{'session'});
+        if ($strShareSessionID) {
+		do_print("Please Press Following Link to Download...");
+		do_print("=" x79);
+                do_print(sprintf("%s",  $curr{'fullpath'}));
+		do_print("-" x79);
+                do_print(sprintf(" (8) Size: %s ( %d Bytes)", filesize($curr{'filesize'}), $curr{'filesize'}));
+		do_print(sprintf(" (~) Link: 'http://%s/IO/fileIO.cgi?SessionId=$strShareSessionID'", $G_CONFIG{'server'}));
+		do_print("=" x79);
+                return SUCCESS;
+        }
+        return FAIL;
+}
+
+
+sub fp_up_interactive {
+        my ($cmd, @arg) = @_;
+	$G_CONFIG{'_cmd_'} = $cmd;
+	my $from = $arg[0];
+	if ($from =~ /^([^\/]&[a-zA-Z]\:)/) {
+		$from = "./" . $from;
+	}
+
+	my $to = $arg[1];
+	
+	if ($to eq "") {
+		$to = $G_CONFIG{'login'} . ":/";
+	} else {
+		$to = fp_getfullpath($arg[1]);
+		$to =~ s/\/$//;
+	}
+        my $objEFTP = fp_init();
+        my %curr;
+        my $type;
+
+	if (!-e $from) {
+		do_print("File or Directory $from doesn't exist!");
+		return FAIL;
+	}
+	
+	$curr{'dirflag'} = -f $from ? "File" : "Directory";
+	$curr{'fullpath'} = $from; 
+	$curr{'targetdir'} = $to; 
+
+	return fp_up_rec(\%curr, $objEFTP);
+}
+
+
+
+sub fp_up_single {
+	my ($strSrcPath, $strTargetDir) = @_;
+
+	my $stdout = stdout();
+	my $stderr = stderr();
+
+	if (!open(HFILE,"<$strSrcPath")) {
+		do_log(0, "cannot open local upfile, $strSrcPath");
+		return FAIL;
+	}   
+
+ 	my $startposition = 0;
+ 	my @arrStat = stat $strSrcPath;
+ 	my $filesize = $arrStat[7];
+
+	my @path=split(/\//, $strSrcPath);
+	my $log = "upload from $strSrcPath\n";
+	if ($^O eq 'darwin') { 
+		#$strTargetDir = Encode::decode('utf-8-mac', $strTargetDir); 
+		#$path[$#path] = Encode::decode('utf-8-mac', $path[$#path]); 
+	}
+	my $strTargetPath = sprintf("%s/%s", $strTargetDir,$path[$#path]);
+	$log .= "\t\tto $strTargetPath with $filesize size!"; 
+        if (LocalLanguage ne KOREAN) {
+                my $buf;
+		$buf = ToBYTE($strTargetPath);
+                if ($G_CONFIG{'site'} eq 'soribada') {
+                        $buf = MYCONV($buf, "UTF-8", "EUC-KR");
+                }
+		$strTargetPath = uri_escape($buf);
+
+                $buf = ToBYTE($path[$#path]);
+                if ($G_CONFIG{'site'} eq 'soribada') {
+                        $buf = MYCONV($buf, "UTF-8", "EUC-KR");
+                }
+                $path[$#path] = uri_escape($buf);
+        }
+	do_log(0, $log);
+
+	my $UpServer = IO::Socket::INET->new(Proto=>"tcp", 
+		PeerAddr=>$G_CONFIG{'server'}, 
+		PeerPort=>$G_CONFIG{'port'}, Reuse=>1);
+	#my $UpServer; open($UpServer,">err.log"); 
+	$UpServer->autoflush(1); 
+	my $post = PostString($G_CONFIG{'server'});
+	# HTTP/1.1
+	if ($G_CONFIG{'site'} eq 'soribada') {
+		$post =~ s/EUC//g;
+	}
+        print $UpServer $post;
+
+
+ 	print $UpServer sprintf("Content-Type:multipart/form-data; boundary=%s\r\n",BOUNDARY);
+
+	my @format = ();
+
+
+
+	push(@format, 
+ 	sprintf("--%s\r\nContent-Disposition: form-data; name=SessionId\r\n\r\n%s\r\n",BOUNDARY,$G_CONFIG{'session'}),
+ 	sprintf("--%s\r\nContent-Disposition: form-data; name=TargetPath\r\n\r\n%s\r\n",BOUNDARY,$strTargetPath),
+ 	sprintf("--%s\r\nContent-Disposition: form-data; name=BodyLength\r\n\r\n%d\r\n",BOUNDARY,$filesize));
+
+
+	push(@format, sprintf("--%s\r\nContent-Disposition: form-data; name=LoadType\r\n\r\n%s\r\n",BOUNDARY, "UPLOAD"));
+
+	push(@format,sprintf("--%s\r\nContent-Disposition: form-data; name=FileName; filename=%s\r\n\r\n",BOUNDARY,$path[$#path]));
+
+ 	my $UpHeader = join("", @format);
+
+	my $strEnd = "\r\n--" . BOUNDARY . "-";
+ 	my $ContentLength = length($UpHeader) + length($strEnd);
+ 	$ContentLength += $filesize;
+ 
+ 	print $UpServer sprintf("Content-Length:%d\r\n\r\n", $ContentLength);
+ 	print $UpServer $UpHeader;
+
+	
+	if ($G_CONFIG{'trace'} eq 'yes') {
+		print $stderr $post;
+ 		print $stderr sprintf("Content-Length:%d\r\n\r\n", $ContentLength);
+ 		print $stderr $UpHeader;
+	}
+ 
+	my $line = "";
+	print $stderr sprintf("   %6s", filesize_readable($filesize)) . "[   10%  20%  30%  40%  50%  60%  70%  80%  90% 100%]\n";
+	my $buf = "";
+        my $start=Time::HiRes::time();
+
+        my $len = 0;
+        my $counter=0;
+	my $buflen = 0;
+	my $buf = "";
+	my @span = qw(- \ | / * - \ | / *);
+	my $speed = filesize_readable(0);
+	my $total_bytes = filesize_readable(0);
+	binmode $UpServer;
+	binmode HFILE;
+
+	while ($line = <HFILE>) { 
+	    $len += (length $line);
+            my $percent = floor($len*1000/$filesize);
+            my $star = $percent - $counter;
+            if ($star) {
+        	my $oldfh = select($stderr); $| = 1; select($oldfh);
+		print $stderr "\b" x $buflen;
+                my $end=Time::HiRes::time();
+                my $new_speed = sprintf("%s/s", filesize_readable($len/($end-$start)));
+                my $new_len = filesize($len);
+		if ($counter%5==0) {
+			$speed = $new_speed;
+			$total_bytes = $new_len;
+		}
+ 		$buf = sprintf("[%s]%6s[", 
+                                $span[$len%($#span+1)],$total_bytes);
+                $buf .= sprintf('=' x floor($counter/20)  . ">" . " " x (50-floor($counter/20)));
+                $buf .= sprintf("] %02d%%%7s", $percent/10, $speed);
+                print $stderr "$buf";
+		$buflen = length($buf);
+            }
+            $counter = $percent;
+            print $UpServer $line;
+	} 
+
+
+        print $stderr "\b" x $buflen;
+	$buf = sprintf("   %6s[", filesize_readable($len));
+        $buf .= sprintf('=' x 50  . "|");
+        my $end=Time::HiRes::time();
+        my $speed = sprintf("%s/s", filesize_readable($len/($end-$start)));
+           $buf .= sprintf("] %02d%%%7s", 100,$speed);
+        print $stderr "$buf\n";
+
+	print $UpServer $strEnd; 
+
+	$counter=SUCCESS;
+	while($line = <$UpServer>){
+		$line =~ s/\n//g;
+		if ($line =~ /ERROR/) {
+			$counter=FAIL;
+        		do_log(0, sprintf("Upload Failed!.[%d Bytes]", $len));
+		}
+	}
+       	do_log(0, sprintf("Upload Completed!.[%d Bytes]", $len));
+	close HFILE;
+     	close $UpServer; 
+	return $counter;
+}
+
+
+sub fp_update {
+	my ($cmd,@arg) = @_;
+	my $remote;
+	my $target = $0;
+
+	my ($stdout) = stdout();
+	my ($stderr) = stderr();
+	
+	do_log(0, "Update FP...");
+	use Net::HTTP;
+        my $s = Net::HTTP->new(Host => "192.168.1.202") || die $@;
+        $s->write_request(GET => "/embian/current.pm", 'User-Agent' => "Mozilla/5.0");
+	open(FP, "> current.pm");
+        my($code, $mess, %h) = $s->read_response_headers;
+	if ($code != 200) {
+		do_log(0, "=> Failed($code)! /embian/current.pm doesn't exist!");
+		return FAIL;
+	}
+	#do_log(0, "return code: $code");
+	my($lines);
+	my $total = 0;
+
+        while (1) {
+           my $buf;
+           my $n = $s->read_entity_body($buf, 1024);
+	   $total += $n;
+           last unless $n;
+           print FP $buf;
+        }
+	close(FP);
+	if ($total > 32000) {
+		if (-l $target) {
+			$target = readlink($target);
+			do_log(0,"binary symlinked, fetching real file $target"); 
+		}
+		rename("current.pm", $target);
+		chmod 0755, $target;
+		do_log(0, "=> successful updating $target");
+		return SUCCESS;
+	} else { 
+		do_log(0, "=> Failed because it doesn't look like pm file!");
+		unlink("current.pm");
+	}
+        return FAIL;
+}
+
+sub fp_down_single_BIO {
+	my ($strSrcPath, $nTotalCnt, $strTargetDir) = @_;
+	my $remote;
+
+	my ($stdout) = stdout();
+	my ($stderr) = stderr();
+	
+	my @path=split(/\//, $strSrcPath);
+	my $log = "Download $strSrcPath\n";
+	my $buf = $strSrcPath;
+
+	if (LocalLanguage ne KOREAN) {
+		$buf = ToBYTE($strSrcPath);
+		if ($G_CONFIG{'site'} eq 'soribada') {
+			$buf = MYCONV($buf, "UTF-8", "EUC-KR");
+		}
+	}
+        $strSrcPath = uri_escape($buf);
+
+	my $strTargetPath = sprintf("%s/%s", $strTargetDir,$path[$#path]);
+	$log .= "\t\tto $strTargetPath with $nTotalCnt size!"; 
+	do_log(0, $log);
+	if (!($remote = IO::Socket::INET->new( Proto=>"tcp",
+		Type=>SOCK_STREAM))) {
+		print STDERR "Error creating socket: $@";
+	}
+
+	my $paddr;
+	if (my $iaddr = inet_aton($G_CONFIG{'server'})) {
+		$paddr = sockaddr_in($G_CONFIG{'port'}, $iaddr);
+	} else {
+		print STDERR "Error resolving remote addr: $@";
+	}
+
+	$remote->connect( $paddr );
+	if (!$remote) {
+                do_log(0, "Can't Download , Disconnect Server");
+                return FAIL;
+        }
+
+
+        # POST DOWN ====================================
+        my $strDown = sprintf( "SessionId=%s&TargetPath=%s&LoadType=DOWNLOAD&StartPosition=0\r\n\r\n" ,
+
+                  $G_CONFIG{'session'}, $strSrcPath);
+	
+        my $nTotalLength = length $strDown;
+	my $post = PostString($G_CONFIG{server});
+	if ($G_CONFIG{'site'} eq 'soribada') {
+		$post =~ s/EUC//g;
+	}
+        print $remote $post;
+        #print $remote PostString;
+        print $remote "Content-Type:singlepart\r\n";
+	print $remote "User-Agent:fp-$VERSION\r\n";
+        print $remote sprintf("Content-Length:%d\r\n\r\n", $nTotalLength);
+        print $remote $strDown;
+        # POST DOWN ====================================
+	# DEBUG HEADER
+	if ($G_CONFIG{'trace'} eq 'yes') {
+		print $stderr $post;
+		print $stderr "Content-Type:singlepart\r\n";
+		print $stderr sprintf("Content-Length:%d\r\n\r\n", $nTotalLength);
+		print $stderr $strDown;
+	}
+
+
+        my $Input;
+	my $cnt = 0;
+
+	print $stderr sprintf("   %6s", filesize_readable($nTotalCnt)) . "[   10%  20%  30%  40%  50%  60%  70%  80%  90% 100%]\n";
+	my $buf = "";
+	my $buflen = 0;
+	my $start=Time::HiRes::time();
+
+	my $len = 0;
+	my $counter=0;
+	my @span = qw(- \ | / * - \ | / *);
+	my $speed = filesize_readable(0);
+	my $total_bytes = filesize_readable(0);
+	my $data = "";
+	my $header = "";
+
+	while ($Input = <$remote>) {
+		$header .= $Input;
+		if ($Input =~ /^\r\n$/) {
+			last;
+		}
+	}
+	
+	#do_log(0, $header);
+		
+	my $sleep_counter = 0;
+
+        if (!open(HFILE, ">$strTargetPath")) {  
+		do_log(0, "cannot open $strTargetPath");
+		return FAIL;
+	} 
+	binmode HFILE;
+
+	until(eof($remote)) {
+		my $Input;
+		my $a = read($remote,$Input,8192*8);
+		if ($a <= 0) {
+			last;
+		}
+		if ($data eq "") {
+			$len += $a;
+		} else {
+			$len += $a + length($data);
+			$Input = $data . $Input;
+			$data = "";
+			print $Input;
+		}
+		my $percent = floor($len*1000/$nTotalCnt);
+		my $star = $percent - $counter;
+		if ($star) {
+			my $oldfh = select($stderr); $| = 1; select($oldfh);
+			print $stderr "\b" x $buflen;
+			my $end=Time::HiRes::time();
+			my $t = $len/($end-$start);
+			my $new_speed = sprintf("%s/s", filesize_readable($t));
+			my $new_len = filesize_readable($len);
+			if ($counter%5==0) {
+				$speed = $new_speed; 
+				$total_bytes = $new_len;
+			}
+
+			$buf = sprintf("[%s]%6s[", 
+				$span[$len%($#span+1)],$total_bytes);
+			$buf .= sprintf('=' x floor($counter/20)  . ">" . " " x (50-floor($counter/20)));
+			$buf .= sprintf("] %02d%%%7s", $percent/10, $speed);
+			print $stderr "$buf";
+			$buflen = length($buf);
+			my $sleep_counter = floor($t / 1024/1024/$G_CONFIG{'speed_limit'});
+			usleep($sleep_counter*100000);
+		}
+		$counter = $percent;
+               	print HFILE $Input;
+        }
+	
+	print $stderr "\b" x $buflen;
+	$buf = sprintf("   %6s[", filesize_readable($len));
+        $buf .= sprintf('=' x 50  . "|");
+        my $end=Time::HiRes::time();
+        my $speed = sprintf("%s/s", filesize_readable($len/($end-$start)));
+           $buf .= sprintf("] %02d%%%7s", 100,$speed);
+        print $stderr "$buf\n\n";
+        close HFILE;
+
+        if (!open(HFILE, "<$strTargetPath")) {  
+		do_log(0, "cannot open $strTargetPath");
+		return FAIL;
+	} 
+
+	$buf = <HFILE>;
+	$buf = <HFILE>;
+	my $errCode = 0;
+
+	if ($buf =~ /^ErrorCode: ([0-9]+)/) {
+		$errCode = $1;
+		$buf = <HFILE>;
+		if ($buf =~ /^ErrorString: (.*)<BR>/) {
+			$buf = $1;
+		}
+	}
+	close HFILE;
+        close $remote;
+
+	if ($errCode) {
+        	do_log(0, sprintf("Download Error($errCode)!:". $buf));
+		return FAIL;
+	}	
+    do_log(0, sprintf("Download Completed!.[%d Bytes] Time: %.2f", $len, $end-$start));
+	return SUCCESS;
+}
+
+sub fp_down_test {
+	my ($cmd, @arg) = @_;
+
+	my $remote;
+
+#	my $nTotalCnt = 104857600;
+#	my $nTotalCnt = 734003200; 
+	my $nTotalCnt = 1048576; 
+    	my $strTargetDir = "/tmp";
+	
+	my ($stdout) = stdout();
+	my ($stderr) = stderr();
+	
+	my $strSrcPath = "embianc:\/1M";
+
+	my @path=split(/\//, $strSrcPath);
+	my $log = "Download $strSrcPath\n";
+	my $buf = $strSrcPath;
+
+	if (LocalLanguage ne KOREAN) {
+		$buf = ToBYTE($strSrcPath);
+		if ($G_CONFIG{'site'} eq 'soribada') {
+			$buf = MYCONV($buf, "UTF-8", "EUC-KR");
+		}
+	}
+        $strSrcPath = uri_escape($buf);
+
+	my $strTargetPath = sprintf("%s/%s", $strTargetDir,$path[$#path]);
+	$log .= "\t\tto $strTargetPath with $nTotalCnt size!"; 
+	do_log(0, $log);
+	if (!($remote = IO::Socket::INET->new( Proto=>"tcp",
+		Type=>SOCK_STREAM))) {
+		print STDERR "Error creating socket: $@";
+	}
+
+	my $paddr;
+	if (my $iaddr = inet_aton($G_CONFIG{'server'})) {
+		$paddr = sockaddr_in($G_CONFIG{'port'}, $iaddr);
+	} else {
+		print STDERR "Error resolving remote addr: $@";
+	}
+
+	$remote->connect( $paddr );
+	if (!$remote) {
+                do_log(0, "Can't Download , Disconnect Server");
+                return FAIL;
+        }
+
+
+        # POST DOWN ====================================
+        my $strDown = sprintf( "SessionId=%s&TargetPath=%s&LoadType=DOWNLOAD&StartPosition=0\r\n\r\n" ,
+
+                  $G_CONFIG{'session'}, $strSrcPath);
+	
+        my $nTotalLength = length $strDown;
+	my $post = PostStringTest;
+        
+	print $remote $post;
+        #print $remote PostString;
+        print $remote "Content-Type:singlepart\r\n";
+	print $remote "User-Agent:fp-$VERSION\r\n";
+        print $remote sprintf("Content-Length:%d\r\n\r\n", $nTotalLength);
+        print $remote $strDown;
+        # POST DOWN ====================================
+	# DEBUG HEADER
+	if ($G_CONFIG{'trace'} eq 'yes') {
+		print $stderr $post;
+		print $stderr "Content-Type:singlepart\r\n";
+		print $stderr sprintf("Content-Length:%d\r\n\r\n", $nTotalLength);
+		print $stderr $strDown;
+	}
+
+
+        my $Input;
+	my $cnt = 0;
+
+	print $stderr sprintf("   %6s", filesize_readable($nTotalCnt)) . "[   10%  20%  30%  40%  50%  60%  70%  80%  90% 100%]\n";
+	my $buf = "";
+	my $buflen = 0;
+	my $start=Time::HiRes::time();
+
+	my $len = 0;
+	my $counter=0;
+	my @span = qw(- \ | / * - \ | / *);
+	my $speed = filesize_readable(0);
+	my $total_bytes = filesize_readable(0);
+	my $data = "";
+	my $header = "";
+
+	while ($Input = <$remote>) {
+		$header .= $Input;
+		if ($Input =~ /^\r\n$/) {
+			last;
+		}
+	}
+	
+	#do_log(0, $header);
+		
+	my $sleep_counter = 0;
+
+        if (!open(HFILE, ">$strTargetPath")) {  
+		do_log(0, "cannot open $strTargetPath");
+		return FAIL;
+	} 
+	binmode HFILE;
+
+	my $js_count=0;
+	until(eof($remote)) {
+		my $Input;
+		my $a = read($remote,$Input,8192*8);
+		if ($a <= 0) {
+			last;
+		}
+		if ($data eq "") {
+			$len += $a;
+		} else {
+			$len += $a + length($data);
+			$Input = $data . $Input;
+			$data = "";
+			print $Input;
+		}
+		my $percent = floor($len*1000/$nTotalCnt);
+		my $star = $percent - $counter;
+		if ($star) {
+			my $oldfh = select($stderr); $| = 1; select($oldfh);
+			print $stderr "\b" x $buflen;
+			my $end=Time::HiRes::time();
+			my $t = $len/($end-$start);
+			my $new_speed = sprintf("%s/s", filesize_readable($t));
+			my $new_len = filesize_readable($len);
+			if ($counter%5==0) {
+				$speed = $new_speed; 
+				$total_bytes = $new_len;
+			}
+
+			$buf = sprintf("[%s]%6s[", 
+				$span[$len%($#span+1)],$total_bytes);
+			$buf .= sprintf('=' x floor($counter/20)  . ">" . " " x (50-floor($counter/20)));
+			$buf .= sprintf("] %02d%%%7s", $percent/10, $speed);
+			print $stderr "$buf";
+			$buflen = length($buf);
+			my $sleep_counter = floor($t / 1024/1024/$G_CONFIG{'speed_limit'});
+			usleep($sleep_counter*100000);
+		}
+		$counter = $percent;
+               	print HFILE $Input;
+	#	if( $js_count >1 ){
+	#		last;
+	#	}
+		$js_count++;
+        }
+	
+	print $stderr "\b" x $buflen;
+	$buf = sprintf("   %6s[", filesize_readable($len));
+        $buf .= sprintf('=' x 50  . "|");
+        my $end=Time::HiRes::time();
+        my $speed = sprintf("%s/s", filesize_readable($len/($end-$start)));
+           $buf .= sprintf("] %02d%%%7s", 100,$speed);
+        print $stderr "$buf\n\n";
+        close HFILE;
+
+        if (!open(HFILE, "<$strTargetPath")) {  
+		do_log(0, "cannot open $strTargetPath");
+		return FAIL;
+	} 
+
+	$buf = <HFILE>;
+	$buf = <HFILE>;
+	my $errCode = 0;
+
+	if ($buf =~ /^ErrorCode: ([0-9]+)/) {
+		$errCode = $1;
+		$buf = <HFILE>;
+		if ($buf =~ /^ErrorString: (.*)<BR>/) {
+			$buf = $1;
+		}
+	}
+	close HFILE;
+        close $remote;
+
+	if ($errCode) {
+        	do_log(0, sprintf("Download Error($errCode)!:". $buf));
+		return FAIL;
+	}	
+        do_log(0, sprintf("Download Completed!.[%d Bytes] Time: %.2f", $len, $end-$start));
+	return SUCCESS;
+}
+sub fp_printconfig {
+	my ($cmd, @arg) = @_;
+	foreach my $i (sort keys %G_CONFIG) {
+		do_print(sprintf("%8s=\t%s", $i, $G_CONFIG{$i})); 
+	} 
+	return SUCCESS;
+}
+
+
+sub fp_syntax {
+	my ($cmd, @arg) = @_;
+
+	do_print("version: $VERSION");
+	do_print("Usage: " . PROGNAME . " <command> arg1 arg2 ..");
+	do_print("\tex)");
+	do_print("\tCONFIG:");
+	do_print("\t\t" . PROGNAME . " config server 	HOST");
+	do_print("\t\t" . PROGNAME . " config port 	PORT_NUMBER");
+	do_print("\t\t(optionally, " . PROGNAME . " config soap_server HOST)");
+	do_print("\t\t" . PROGNAME . " config site 	soribada|folderplus");
+	do_print("\t\t" . PROGNAME . " config login 	ID");
+	do_print("\t\t" . PROGNAME . " config password 	PASSWD");
+	do_print("\t\t" . PROGNAME . " config sort 	name|time|size");
+	do_print("\t\t" . PROGNAME . " config order 	asc|dsc");
+	do_print("\t\t" . PROGNAME . " config downdir 	DIRECTORY");
+	do_print("\t\t" . PROGNAME . " config trace 	yes|no");
+	do_print("\t\t" . PROGNAME . " config filesize 	actual|readable");
+	do_print("\t\t" . PROGNAME . " config speed_limit 0|2|4|8");
+	do_print("\t\t" . PROGNAME . " config adult 	yes|no");
+	do_print("\t\t" . PROGNAME . " config filetype 	1|2|3|4|5");
+	do_print("\t\t\t" . "filetype : 1 => movie, 2 => music, 3 => picture, 4 => achive, 5 => document");
+	do_print("\tSEARCH:");
+	do_print("\t\t" . PROGNAME . " find WORD");
+	do_print("\t\t" . PROGNAME . " jump PAGE_NUM");
+	do_print("\t\t" . PROGNAME . " next|prev|first|last");
+	do_print("\t\t" . PROGNAME . " detail {num}");
+	do_print("\tDIR:");
+	do_print("\t\t" . PROGNAME . " pwd");
+	do_print("\t\t" . PROGNAME . " ls [ARG]");
+	do_print("\t\t\t where ARG1 is no1:/, \"no1:/dirname\", -, .., or {number}");
+		
+	do_print("\t\tSimilar to 'ls' do:");
+	do_print("\t\t\tcd,mkdir,rm,mv,down");
+	do_print("\tACTION:");
+	do_print("\t\t" . PROGNAME . " lsmount|cdmount|mkmount|rmmount [ARG]");
+	do_print("\t\t" . PROGNAME . " down {num} [ download dir]");
+	do_print("\t\t" . PROGNAME . " up /some/dir [ upload dir]");
+	do_print("\t\t" . PROGNAME . " chpass [new password]");
+	do_print("\tECHO:");
+	do_print("\t\t" . PROGNAME . " echo [your string]");
+	do_print("\tPERFORMANCE TEST:");
+	do_print("\t\t" . PROGNAME . " lstest jaejunh:/");
+	do_print("\tUPDATE:");
+	do_print("\t\t" . PROGNAME . " update");
+	return FAIL;
+}
+
+sub fp_print {
+	my ($cmd, @arg) = @_;
+	do_log(0, "cmd = $cmd, arg1=$arg[0], arg2=$arg[1], arg3=$arg[2]");
+	return FAIL;
+}
+
+sub do_loginit {
+	my ($stdout, $stderr) = @_;
+	do_init($stdout,$stderr);
+}
+
+sub run_cmd {
+	my ($cmd, @arg) = @_;
+	my $ret = SUCCESS; 
+	
+	if (fp_openconfig() == FAIL) {
+		return fp_writeconfig();
+	}
+	$t0_cmd = [ gettimeofday ];
+
+	# 0. CONFIG
+	if ($cmd eq "config") {
+		if ($#arg < 0) {
+			$ret = fp_printconfig($cmd,@arg);
+		} elsif ($arg[0] eq "downdir") {
+			$ret = mkdir_rec($arg[1]);
+		}
+		$G_CONFIG{$arg[0]} = $arg[1];
+		$ret &= SUCCESS;
+	# 1. LOGIN 
+	} elsif ($cmd eq "login") {
+		$ret = fp_login($cmd, @arg);
+	} elsif ($cmd eq "logout") {
+		$ret = fp_logout($cmd, @arg);
+	# 2. File Operation
+	} elsif ($cmd eq "ls") {
+		$ret = fp_ls($cmd, @arg); 
+	} elsif ($cmd eq "pwd") {
+		$ret = fp_pwd($cmd, @arg); 
+	} elsif ($cmd eq "cd") {
+		$ret = fp_cd($cmd, @arg); 
+	} elsif ($cmd eq "mkdir") {
+		$ret = fp_mkdir($cmd, @arg);
+	} elsif ($cmd eq "mv") {
+		$ret = fp_mv($cmd, @arg);
+	} elsif ($cmd eq "rm") {
+		$ret = fp_rm($cmd, @arg);
+	# 3. Find Interator 
+	} elsif ($cmd eq "find") {
+		$ret = fp_find($cmd, @arg);
+	} elsif ($cmd eq "next") {
+		$ret = fp_jump($cmd,$G_CONFIG{'curr'}+1);
+	} elsif ($cmd eq "prev") {
+		$ret = fp_jump($cmd,$G_CONFIG{'curr'}-1);
+	} elsif ($cmd eq "last") {
+		$ret = fp_jump($cmd, $G_CONFIG{'last'});
+	} elsif ($cmd eq "first") {
+		$ret = fp_jump($cmd, 1);
+	} elsif ($cmd eq "jump") {
+		$ret = fp_jump($cmd, @arg);
+
+	# 4. Detail 
+	} elsif ($cmd eq "detail") {
+		$ret = fp_detail($cmd, @arg);
+		#$ret = fp_jump($cmd,$G_CONFIG{'curr'});
+	
+	# 5. Download/Upload
+	} elsif ($cmd eq "down") {
+		$ret = fp_down($cmd,@arg);
+	} elsif ($cmd eq "downtest") {
+		$ret = fp_down_test($cmd,@arg);
+	} elsif ($cmd eq "downlink") {
+		$ret = fp_downlink($cmd,@arg);
+	} elsif ($cmd eq "up") {
+		$ret = fp_up($cmd,@arg);
+	# 6. Mount 
+	} elsif ($cmd eq "lsmount") {
+		$ret = fp_lsmount($cmd,@arg);
+	} elsif ($cmd eq "mkmount") {
+		$ret = fp_mkmount($cmd,@arg);
+	} elsif ($cmd eq "rmmount") {
+		$ret = fp_rmmount($cmd,@arg);
+	} elsif ($cmd eq "cdmount") {
+		$ret = fp_mkmount($cmd,@arg);
+		if ($ret) {
+                	my ($type, $filesize, $dirflag, $fullpath) = fp_deserialize($G_CONFIG{$arg[0]});
+                	my @path = split(/\//, $fullpath); 
+			my $fulldir = join("/",@path[0..$#path-1]); 
+			$ret = fp_cd($cmd,join("/", @path[0..$#path-1])); 
+		}
+	} elsif ($cmd eq "profile") {
+		$ret = fp_profile($cmd,@arg);
+	} elsif ($cmd eq "chpass") {
+		$ret = fp_chpass($cmd,@arg);
+	} elsif ($cmd eq "echo") {
+		$ret = fp_echo($cmd,@arg);
+
+	# 7. DEBUG and UTIL
+	} elsif ($cmd eq "update") {
+		$ret = fp_update($cmd,@arg);
+	} elsif ($cmd eq "lstest") {
+		$ret = fp_ls_recursive($cmd, @arg);
+	} else {
+	# 10. Print Command
+		$ret = fp_syntax($cmd,@arg);
+	}
+	if ($ret == SUCCESS) {
+		$G_CONFIG{"lastcmd"} = join(" ", $cmd, (map { '"' . $_ . '"' } @arg));
+		fp_writeconfig();
+	}
+	return $ret;
+}
+
+sub _test {
+	my ($flag) = @_;
+	my $ret;
+	my $cmd = $ARGV[0];
+	my @arg = ();
+
+	if (LocalLanguage eq KOREAN) {
+		@arg = @ARGV[1..$#ARGV];
+	} else {
+		@arg = map {$_ = ToUTF8($_); } @ARGV[1..$#ARGV];
+	}
+
+	#print STDERR length($ARGV[1]), "\n";
+
+	if ($flag) {
+		my $stdout_buf = "";
+		my $stderr_buf = "";
+
+		open(MYSTDOUT, ">",  \$stdout_buf); open(MYSTDERR, ">",  \$stderr_buf); 
+		do_loginit(\*MYSTDOUT,\*MYSTDERR);
+
+		$ret = run_cmd($cmd,@arg);
+
+		close(MYSTDOUT); close(MYSTDERR);
+
+		print STDOUT $stdout_buf; 
+		print STDOUT $stderr_buf;
+	} else {
+	#	do_loginit(\*STDOUT, \*STDERR);
+		do_loginit(\*STDERR, \*STDERR);
+		$ret = run_cmd($cmd,@arg);
+	}
+	return $ret;
+}
+
+1;
+
+#
+###############################################################################
+if (PROGNAME =~ /fp.pl/i || PROGNAME =~/fp$/i) {
+	eval 'sub fp_down; *fp_down = \&fp_down_interactive;';
+	eval 'sub fp_up; *fp_up = \&fp_up_interactive;';
+	exit(_test(0));
+} else {
+	#_test(0);
+}
+###############################################################################
+
+1;
+
+
+

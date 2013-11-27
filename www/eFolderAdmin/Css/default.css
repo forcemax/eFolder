@@ -1,0 +1,122 @@
+body {
+	background-color: #39424B;
+	margin: 0;
+	padding: 0;
+}
+body, option, input {
+	font-size: 9pt;
+	font-family: "Trebuchet MS", Verdana, Helvetica, Arial,sans-serif;
+}
+.boxMain a, .boxMain a:active {
+	color: #0F67A1;
+	text-decoration: none;
+	padding: 5px 10px;
+	display: block;
+	margin-right: 15px;
+	border-bottom: 1px solid #EEEEEE;
+}
+.boxMain a:hover {
+	background-color: #EEEEEE;
+	color: #192839;
+	border-bottom: 1px solid #DDDDDD;
+}
+.boxTitle a {
+	color: #999999;
+	text-decoration: none;
+}
+
+#page_header {
+	background-color: #2C3033;
+}
+#page_body {
+	background: url("/eFolderAdmin/Images/bg-main.jpg") repeat-x scroll 50% 0 #39414A;
+}
+
+#top_title, #body, #footer_copyright {
+	width: 940px;
+}
+
+#top_title h1 {
+	color: #FFFFFF;
+	font-weight: normal;
+	background: url("/eFolderAdmin/Images/folder_icon.png") no-repeat;
+	padding: 8px 0 8px 58px;
+}
+
+#body {
+	background-color: #181C21;
+}
+
+#body_left {
+	width: 150px;
+	padding: 20px;
+}
+
+#body_right {
+	width: 760px;
+	padding: 20px 20px 20px 0;
+}
+
+#body_one {
+	padding: 100px 280px;
+}
+
+#footer_copyright {
+	background-color: #19232D;
+	border-top: 2px solid #000000;
+	padding: 10px 0;
+	color: #FFFFFF;
+}
+
+.tblTitle {
+	background-color: green;
+	height: 25px;
+	color: #FFF;
+	font-weight: bold;
+	padding-left: 10px;
+}
+
+.tblList {
+	border-bottom: 1px solid #EEEEEE;
+}
+
+.roundTop {
+	-moz-border-radius-topleft: 6px;
+	-moz-border-radius-topright: 6px;
+	border-top-left-radius: 6px 6px;
+	border-top-right-radius: 6px 6px;
+}
+.roundBottom {
+	-moz-border-radius-bottomleft: 6px;
+	-moz-border-radius-bottomright: 6px;
+	border-bottom-left-radius: 6px 6px;
+	border-bottom-right-radius: 6px 6px;
+}
+.boxTitle {
+	padding: 8px 0 8px 15px;
+	background-color: #0D5995;
+	color: #FFF;
+	/*text-align: center;*/
+	font-weight: bold;
+	font-size: 10pt;
+}
+.boxMain {
+	padding: 8px 0 8px 15px ;
+	background-color: #FFF;
+}
+.boxAlong {
+	padding: 8px 8px 8px 15px;
+	background-color: #FFF;
+	font-weight: bold;
+	margin-bottom: 15px;
+	font-size: 11pt;
+}
+.list {
+	width: 350px;
+	height: 372px;
+	overflow: auto;
+}
+.comment {
+	padding-left: 40px;
+	text-align: left;
+}

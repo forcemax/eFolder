@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope 
+	xmlns:namesp2="http://namespaces.soaplite.com/perl" 
+	SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" 
+	xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance" 
+	xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" 
+	xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" 
+	xmlns:xsd="http://www.w3.org/1999/XMLSchema">
+	<SOAP-ENV:Body>
+		<namesp3:ListDirectoryResponse 
+			xmlns:namesp3="http://kerberos.embian.gnu/FTPService">
+			<SOAP-ENC:Array SOAP-ENC:arrayType="namesp2:_RemoteFile[3]" xsi:type="namesp2:Array">
+				<namesp2:_RemoteFile xsi:type="namesp2:_RemoteFile">
+					<FileSize xsi:type="xsd:int">0</FileSize>
+					<CreateTime xsi:type="xsd:int">1034852986</CreateTime>
+					<FileType xsi:type="xsd:string">File</FileType>
+					<ModifyTime xsi:type="xsd:int">1034852986</ModifyTime>
+					<Name xsi:type="xsd:string">b.pl</Name>
+			</namesp2:_RemoteFile>
+			<namesp2:_RemoteFile xsi:type="namesp2:_RemoteFile">
+				<FileSize xsi:type="xsd:int">2048</FileSize>
+				<CreateTime xsi:type="xsd:int">1035010240</CreateTime>
+				<FileType xsi:type="xsd:string">Directory</FileType>
+				<ModifyTime xsi:type="xsd:int">1035010240</ModifyTime>
+				<Name xsi:type="xsd:string">hjparkHome</Name>
+			</namesp2:_RemoteFile>
+			<namesp2:_RemoteFile xsi:type="namesp2:_RemoteFile"> 
+				<FileSize xsi:type="xsd:int">2048</FileSize>
+				<CreateTime xsi:type="xsd:int">1035010139</CreateTime>
+				<FileType xsi:type="xsd:string">Directory</FileType>
+				<ModifyTime xsi:type="xsd:int">1035010139</ModifyTime>
+				<Name xsi:type="xsd:string">hjparkhometest</Name>
+			</namesp2:_RemoteFile>
+			</SOAP-ENC:Array>
+		</namesp3:ListDirectoryResponse>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

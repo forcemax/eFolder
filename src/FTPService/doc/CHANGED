@@ -1,0 +1,343 @@
+Version 1.0
+ -- eFolder Launched!
+
+
+-----------------
+
+6.4
+ * 2005.12.01
+ - Modify FTPServiceMain.pm : SetShareOption() accept only alphanum char.
+
+6.3
+ * 2005.10.24
+ - Modify ChangePassword() in FTPServiceMain.pm
+
+ * 2005.10.14 ==> Add Game Link Process to FTPService : Unfinished code
+ - Add GameLink Process Function to FTPServiceMain.pm, UserObject.pm, Session.pm, fileIO.cgi
+
+ * integrate of FTPService for SuperClient and FTPService for Folderplus Client
+ - Modify function to permit the use of  Multiple SuperUserID and SuperUserIP 
+	Modify file: IsAdmin() in UserObject.pm 
+
+ * 2005.11.07 ==> Change Super User Check process 
+  - Authenticate() in UserObject.pm 
+
+ 
+6.2
+ - Modify Write Download log for Network Traffic issue 
+ - Add Resource "InvalidPasswdLength" to RESOUCE_ENG.pm
+ - Modify Function ChangePassword : Check Invalid Password Length
+ - Modify Authenticate Log Format (Login) ==> user id[user ip][user tool]
+
+6.1
+ - Modify Function SendShareMail() from MailClient.pm
+ - Network Split MailShare : Add file MailShare.cgi 
+ - Modify Function FindFiles2() from FTPServiceMain.pm (마% 로 검색시 막음) : 2005.06.28 LeeJaeSung
+ - Modify FileName , ( SmartDNS.pm => DNSLib.pm )
+   ==> Modify Package Name.
+ - Add File for Make DNS Data : MakeDNS.pl 
+ - Add File dm : dm is DDNS Manager
+ - Add File update.cgi : Update Check.
+
+6.0 
+ - Modify Function  GetCoin() from Account.pm ( add Check WebDB Connection)
+   ==> Write Log
+ - Modify DownLoadLog ( Add User Client, apache log modify )
+ - Modify HasEnoughMoney_Local() at UserObject.pm ( add string "NOTUSEDB")
+
+5.9
+ - Add FindFiles3() :  확장자 제외검색 ( 아직 적용안됨 )
+ - Modify time() to Time::HiRes::time().
+ - Modify ListDirectory2() in FTPServiceMain.pm . ( Added $strRealPath ~= s/\/\//\//g; ) Because MAC Client
+
+ - Modify Mac Client End Point (FTPService3 -> FTPService)
+ 
+ - Super Client 관련 FTPService 업데이트.( Add MakeSuperConfig.pl , CONFIG.pm , FTPServiceMain.pm(FindFiles2()), StartMakeConfig.sh 수정)
+
+  <About NetworkSplit (Not Completed)>
+ - Modify DNS2.cgi, SmartDNS.pm
+ - Add Function to FTPServiceMain.pm (Authentication3(), GetFileAttribute2(), ListDirectory3())
+ - Add Function to SOAPHelper.pm ( MakeDirListResponse3() )
+ - Add Files to eFolder Package ( MakeDNS.pl , ddnsmgr.pl )
+  
+  
+5.8
+ - Modify CheckCache(), CacheHit() use md5sum in Cache.pm
+ - Modify update DownLoadLog , in Account.pm, fileIO.cgi, fileIOEUC.cgi
+ - add function 'ListDirectoyTest' in FTPServiceMain.pm 
+
+5.7
+ - Modify Search Query in FileFinder.pm
+
+5.6
+ - Modify StartMakeConfig   : ifconfig ==> /sbin/ifconfig
+ - Make Adult / Child Second Version
+ - Modify Log Date Format  : ex) [2005-04-11 12:12:12]
+
+
+5.5
+ - Add StartMakeConfig.sh, MakeConfig.pl in eFolder 
+ - Add G_DEBUG_RUN in CONFIG.pm
+ - RealTime Configuration (CONFIG.pm)
+ - Modify CONFIG.pm for LOG FORMAT
+	* Login
+        * Make Directory
+        * Delete Directory
+        * Delete File
+        * MakeShare SessionID
+        * SendShare mail
+        * Download
+        * Upload
+ 
+5.4 
+ - Add ADULT_HIT_COUNT in CONFIG.pm
+ - FTPService2.pm, FTPService3.pm 의 FTPServiceMain.pm 으로 통합. 
+ - Modify HandlerUTF8.pm
+ - Modify CONFIG.pm for LOG FORMAT
+ - Add 00.CONFIG, 11.ALTERNATIVE in eFolder
+   
+ 
+5.3
+ 2005/03/18 
+ - Modify SOAP::Lite Return Type in SOAPHelper.pm
+
+ 2005/03/17
+ - Modify AuthenticateUAS to CheckUAS in FTPService2.pm,UserObject.pm
+   => 아무일도 하지 않는 함수를 UAS서비스의 상태를 점검하는 함수로 수정.
+
+ - Add UAS_TEST_USER in CONFIG.pm
+   
+ - 성인/일반 검색, User Base Tagging 기능 구현
+  => Add FindFiles2 , SetAdultRegistry in FileFinder.pm, FTPService2.pm 
+  => Add Response Function in SOAPHelper.pm 
+
+ - Add ListDirectory2  in FTPService2.pm, FileSystem.pm 
+ - Add DaysLeft in FileFinder.pm
+  => 남은기간 계산을 서버에서 해서 클라이언트에 넘겨준다.
+ 
+ 2005/03/16
+ - Modify GetMemberCount in Account.pm 
+   =>UAS 가 서비스 되지 않을때, mount_tbl테이블을 삭제해 버리는 버그 수정.
+
+ 2005/03/21
+ - Mail Share 에서 공유 기간 설정 기능의 추가.
+   => Add CheckFireDate() in UserObject.pm , Session.pm
+ - Modify MakeDirectory, Rename in FTPService2.pm
+   => 파일명이나 디렉토리명 마지막에 '..' 이 들어가서 생기는 윈도우 오류를 방지.
+ 
+
+5.2
+ 2005/03/09
+ - AddMemberToMount in Account.pm 수정. 
+   => 최대 친구수 비교시, 26명까지 되는 버그 수정: 최대숫자 비교시에 > 이렇게 비교 하기 때문에 26명째도 가능. >= 이렇게 수정
+   => 가입되어 있지 않은 회원의 친구추가시 실패하도록 수정. getpwnam() 함수 추가
+
+ - GetMemberCount in Account.pm 수정. 
+   => 친구 추가시 mount_tbl에 있는 잘못된 값을들 정리 하도록 수정. 
+  
+5.1
+ - /var/log/apache/error_log 파일에 클라이언트 버전 로그를 남긴다. ( modify Authenticate() in FTPService2.pm )
+ - 이전 버전에 들어있던 [JSLOG] 삭제.
+ - SmartDNS2.pm 의 수정. 
+    ( -300 에러일때 _GetHostAny() 에서 서버 아이피 넘겨주게 수정, 
+      DownServerList, UpServerList 따로 설정하게 수정.)
+
+5.0
+ - eFolder_DownLoadLog FileSize가 받은 만큼만 입력되게 수정.
+ - ClientVersion is 5.1
+
+4.9
+ - fileIO.cgi 에서 다운로드가 끝났을때 DownLoadLog를 남길수 있게 한다. 
+   - Scandb 에 eFolder_DownloadLog 와 DownLoadLog 모두 남긴다.
+ - DownLoad 시 Coin 검사를 하는 부분에서 코인 비교 문제가 있었음. 
+   - DB에서 가져올때(GetCoin) int 로 캐스팅 하는것을 삭제.
+ - eFolder_DownLoadLog 의 디비 주소를 efdb에서 scandb 로 변경
+
+4.8
+2005/01/10
+ - wild character ignore => 'sub FindFiles' in  FTPService2.pm
+
+4.7
+2004/12/15 : S01's eAccountManager call disable
+ - add 'sub HasEnoughMoney' in Account.pm
+ - add 'sub HasEnoughMoney_Local' in UserObject.pm
+ - Modify '$objUser->HasEnoughMoney' ==> '$objUser->HasEnoughMoney_Local' in fileIO.cgi
+ - Filter out wild character '_' for mysql in  'sub FindFiles'
+2004/12/16 
+ - Modify 'sub GetVolumStats' in FileSystem.pm : Available Space 4Kb Issue 
+ 
+4.6
+2004/12/13
+- CONFIG.pm: (jaejunh)
+CONFIG definition changed.  FolderPlus_MAX_FREE_DAY introduced.
+
+sub FolderPlus_MAX_FREE_DAY     { return 30;}
+sub FolderPlus_MAX_FREE_TERM    { return FolderPlus_MAX_FREE_DAY()*24*60*60;}
+sub FolderPlus_FREE_TERM        { return FolderPlus_MAX_FREE_DAY()*24*60*60;}
+sub FolderPlus_DOWN_MILEAGE     { return FolderPlus_DOWN_CHARGE()*10;}
+
+
+2004/12/09 
+- IMPORTANT:  Debian and Redhat Version Combined
+- /usr/local/eFolder=> /opt/Embian 
+- new httpd.conf.Debian, httpd.conf.Redhat provided
+- Database.pm support perl v5.8 and perl v5.6
+- use lib qw(/opt/Embian/ /opt/Embian/eFolder/) add in Database.pm
+- Modify "seb GetVolumStats" in FileSystem.pm 
+
+4.5
+2004/12/07 <LeeJaeSung : jslee@embian.com>
+- Modified LogDownload in Account.pm, CONFIG.pm : Download log scandb에 남김. Download Count (jslee)
+- [ParseGETmethod, Parse in mCGI.pm] , [fileIO.cgi] 수정.  (jslee)
+   -내용: GET방식으로 Download 요청시 U로 시작하는 SessionID 일 경우  에러를 리턴함. 
+- FileSystem.pm:  rename return fail if strNewPath already exists. (jaejunh)
+
+4.4
+This Version Support 2.2(3) and 3.0Pre
+
+2004/11/22 - Sungjin Chun <chunsj@embian.com>
+- Modified DeleteFile in FTPService[23].pm so that "Home:\\" can also work.
+
+- Fix Bug at GetMemberCount Account.pm 
+  Now it also checks getpwnam for userid
+
+- Fix Bug at New SOAP Call GetUserProfile2, GetStoreageType, SetStorageType, Account.pm
+- Now, GetUserProfile2's Coin is Coin (instead of Mileage)
+- Search Now Returns 30 Records. 
+- Fix fileIO.cgi, ContentLength computation which is offset by +1; 
+
+4.3
+- Add GetClubList2 SOAP Call
+  Club.pm SOAPHelper.pm, FTPService2.pm
+  ex)
+    $hashClubInfo{ClubNameKor} = $$ref_arrClubList[$i]{ClubNameKor};
+    $hashClubInfo{ClubNameEng} = $$ref_arrClubList[$i]{ClubNameEng};
+    $hashClubInfo{ClubCategory} = $$ref_arrClubList[$i]{ClubCategory};
+    $hashClubInfo{ClubURL}   = $$ref_arrClubList[$i]{ClubURL};
+    $hashClubInfo{ClubMaster}   = $$ref_arrClubList[$i]{ClubMaster};
+    $hashClubInfo{ClubMemberCount}   = $$ref_arrClubList[$i]{ClubMemberCount};
+
+- Add DeleteFile DeleteDirectory Log 
+- Text::Iconv Fail now returns IconvFail Error
+  FTPService2.pm, RESOUCE_ENG.pm
+
+- Final Test on ImposeCoin
+- fileIO.cgi:  Use Explicit Time:HiRes::time function call to avoid warning.
+
+- FOUND:  FolderPlus2.2 has bug in filesize "DownloadCompleted" SOAP Call.
+
+4.2
+2004/11/09
+- Add GetStorageType, SetStorageType SOAP Call
+Account.pm, UserObject.pm, FTPService.pm
+
+- Add ImposeCoin Function to Account.pm, UserObject.pm. 
+
+- Account.pm:  ImposeCoin function changed due to "table change".
+- Account.pm,Session.pm,UserObject.pm,CONFIG.pm:  AddMemberToMount changed to limit
+        25 mount, and 254 char.
+
+ 
+4.1
+2004/10/21
+- Block Duplicate Login Session in Session.pm
+Modified Session Checking Logic so that a user can make single login session only.(AddUserSession, GetUserCredential in Session.pm) Store $strSessionId in ClientName field(HACK, XXX I know) and check whether $strSessionId is equal before return user credential.
+
+4.0
+2004/10/04
+- Add Cache.  Added Cache.pm
+Changed UserObject.pm, fileIO.cgi to use "Cache" system.
+
+Added cachefile_tbl to eAccountManager database
+- Now time measuring is based on microtime, prints in %.2f format.
+
+GetMountList in FTPService2.pm, FTPService3.pmi doesn't  GetVolumeStats
+for mounted list.
+
+
+2004/09/17
+Bug fix in DeleteFile (wrong authorization token, not occurred with current client)
+
+3.9
+2004/09/07
+No Major Change
+Error Printing Clean Up - More Readable ReturnError, etc.
+FTPService2.pm, fileIO.cgi, FileSystem.pm 
+TODO:  more clean up on "print STDERR".  
+
+3.8
+2004/09/03
+Modified UserObject -- prevent relative path specification
+2004/09/03
+Modified FileSystem, UserObject, fileIO.cgi -- checking ownership using IsOwner
+
+3.7
+2004/08/30
+Modified FileSystem  -- start .File & .Directory listing
+
+3.6
+2004/08/16
+Modified fileIO.cgi  -- buffered IO for download
+Added fileIOTest.cgi -- for download test
+Added fileIOUTF.cgi -- UTF8 version download
+Changed mCGI.pm -- added new function paramIconv (for UTF8)
+Modified FTPService2.pm -- now support Rescue, Tmp volume
+Modified FTPService3.pm -- UTF8 version
+
+
+3.5
+2004/07/12
+Modify FTPService2.pm - DeleteDirectory, DeleteFile : Can't delete Directory&File of other user's
+
+3.4
+2004/07/08
+Delete FTPService.pm
+Delete FTPServiced.pm
+Modify UserObject.pm - AuthenticateUAS, Authenticate
+
+3.3
+2004/07/06
+Deny Duplicate Login Code -> Comment
+
+3.2
+2004/06/02
+jaejunh
+ SmartDNS.pm modify -  20sec 1/6, 25sec 1/3, 15sec 1/2
+ FTPService2.pm modify - hi() now returns system time
+ (for FolderPlus2_beta10.exe)
+ CronJob/Stat/LogUser.pl   - added.  Also crontab entry created for this.
+
+3.1
+jaejunh,eastroot
+SmartDNS.pm modify - 4:00~17:00  (1/3), otherwise (2/3)
+FileFinder.pm modified  -  "야심만만" problem solved. 
+
+3.0c
+jaejunh
+SmartDNS.pm modify - for userid tracking for error_log
+ 
+3.0b
+FileSystem.pm modify - for New FolderPlus Client Stat information
+
+3.0a
+	* add FTPService2.pm for New FolderPlus Client
+
+3.0
+BIG:  
+	* add DNS Service (SmartDNS.pm, DNS.cgi)
+	* add FTPServiced2.pm for New FolderPlus Client
+
+2.9f
+remove FTPService.pm.new
+FTPService.pm modify : for not permit others files and directory
+
+2.9e
+FTPService.pm modify : for leave log of deleted files and directroys
+
+2.9d
+FileFinder.pm modify
+
+2.9c
+SearchDB Server : efdb => searchdb
+SessionDB Server : efdb => session
+Scan CronJob Server : s01 => scandb

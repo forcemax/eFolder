@@ -1,0 +1,451 @@
+<this documment is incomplete!.  use it on your risk>
+1.
+2.
+3. Install Commands
+
+## Pre-Operation ##################
+1. OS Installation
+- OSX 10.6 (Snow Leopard)
+- Install macport from http://macport.com
+
+2. Update
+- sudo port selfupdate
+- sudo port upgrade
+
+
+## A. DB (MySQL) ##################
+1. Install MySQL Server
+- sudo port install mysql5-server
+- sudo -u mysql mysql_install_db5
+- sudo /opt/local/lib/mysql5/bin/mysqld_safe &
+- sudo /opt/local/lib/mysql5/bin/mysql_secure_installation
+
+(alias some common cmd)
+- sudo ln -s /opt/local/bin/mysql5 /opt/local/bin/mysql
+- sudo ln -s /opt/local/bin/mysqladmin5 /opt/local/bin/mysqladmin
+- sudo ln -s /opt/local/bin/mysqlshow5 /opt/local/bin/mysqlshow
+- sudo ln -s /opt/local/bin/mysqldump5 /opt/local/bin/mysqldump
+
+2. Configure MySQL my.cnf 
+- sudo vi /opt/local/etc/mysql5/my.cnf
+...
+default-character-set   =       utf8
+...
+ 
+3. MySQL Auto Startup 
+sudo launchctl load -w /Library/LaunchDaemons/org.macports.mysql5.plist  
+
+4. MySQL Restart 
+sudo /opt/local/etc/mysql5/LaunchDaemons/org.macports.mysql5/mysql5.wrapper restart 
+
+## B. UAS Service (!!) #########################
+
+IMPORTANT:  Unlike Linux (recommended!) installation, OSX don't use
+UAS "Service" as authentication.  Instead, we will just use UAS
+table in mysql's UAS database.  Thus, getpwnam POSIX call will be
+replaced by direct db call to UAS table (which is what UAS is actully
+doing in heart.)
+ 
+0. Program Location
+cd "your unzipped location"/UAS
+
+1. eAccount-64bit build
+ <skip>
+
+2. uasclient.ini uasservice.ini
+ <skip>
+
+3. create uas database in mysql (skip install.sh)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[No]   sudo cp /opt/eFolder/etc/fp-x.x /usr/local/bin/fp
+mysql -u root -p < uas.sql
+
+
+## C. eFolder Service ##########################
+
+1. install svn
+- sudo port install subversion
+
+2. Fetch eFolder source
+- cd /opt
+- svn co     svn://repo.embian.com/eFolder/ eFolder
+(if this returns error, please try this instead 
+  svn export svn://repo.embian.com/eFolder/ eFolder )
+
+3. Install APM (apache 2.2+prefork, mod_perl 5 + mysql)
+- sudo port install php5 +apache2+pear
+- sudo port install php5-gd php5-http php5-iconv php5-imagick php5-mbstring php5-mcrypt php5-web php5-xmlrpc php5-zip  
+- sudo port install php5-mysql php5-sockets php5-sqlite
+
+4. Install Perl 5 Modules 
+IMPORTANT:  This is most PAINFUL PART of all the installation.
+
+***********************************************************
+**  Some Basic Information on Mac OSX 10.6  
+***********************************************************
+  OSX comes with standard perl, 5.10, YET WE DON'T USE THIS.
+  Macport has multiple version of perl namely, 5.8, 5.10, 5.12.  
+  Becareful not to screw up versions.  Please check your version
+  with following:
+
+- which perl
+  /opt/local/bin/perl  (<== if this come up, you are OK!)
+
+- perl -V 
+  if you see, 5.10, chances are you might have to compile your perl 
+  for your mod_perl2 since it is compiled with MULTIPLICITY  (as of today, 2011/3/3)   
+  if you see, 5.8.9, you are in LUCK!  This installation document assumes
+  you are using 5.8.9!
+***********************************************************
+
+If everything is OK, let's install perl5 modules.
+  
+Fairly, straight forward, standard perl modules.
+- sudo port install p5-mime-base64
+- sudo port install p5-date-calc
+- sudo port install p5-dbi p5-dbd-mysql
+- sudo port install p5-dbd-mysql
+- sudo port install p5-mime-lite
+- sudo port install p5-text-iconv
+- sudo port install p5-timedate
+
+
+Now, most important PORT,
+
+- sudo port install p5-soap-lite
+  If you see any error such as:
+  .... Use 'port -f activate p5-module-build' to force the activation.
+  .... Use 'port -f activate p5-soap-lite' to force the activation.
+  .... etc
+
+  Just follow their instruction. (i.e. port -f activate ...)
+
+Lastly, install Sphinx::Search module using cpan (sorry, no port yet!),
+########################################
+[ NO NO NO NO !!!!!!  Sphinx::Search 0.22 version (for SphinxSearch 0.9.9x) must be installed]
+
+#-sudo cpan
+#Under the prompt, cpan[1]> :
+#
+# cpan[1]> install Sphinx::Search
+# cpan[1]> quit 
+
+cd /opt/eFolder/OSX
+sudo tar xzvfp Sphinx-Search-0.22.tar.gz
+cd Sphinx-Search-0.22
+sudo perl Makefile.PL
+sudo make
+sudo make install
+
+man Sphinx::Search
+
+5.  Install mod_perl2 
+- sudo port install mod_perl2
+ 
+
+6.  Configure Apache2
+sudo vi /opt/local/apache2/conf/httpd.conf
+------------------------------------------------------------
+<IfModule dir_module>
+    # add index.php
+    DirectoryIndex index.html index.php
+</IfModule>
+
+....
+# add following line, near the bottom
+# eFolder mod_perl2 config
+
+<Perl>
+       use lib qw(/opt/eFolder/lib/perl);
+</Perl>
+Alias /IO /opt/eFolder/lib/perl/eFolder
+
+
+<Location /IO>
+   SetHandler perl-script
+   PerlResponseHandler ModPerl::PerlRun
+   Options +ExecCGI
+   PerlSendHeader On
+   Order allow,deny
+   Allow from all
+</Location>
+<Location /FTPService>
+   SetHandler perl-script
+   PerlHandler EmbianSoapHandler
+   Order allow,deny
+   Allow from all
+</Location>
+
+------------------------------------------------------------
+
+
+7. Restart apache2
+- sudo /opt/local/apache2/bin/apachectl restart
+
+8. Test eFolder, mod_perl2 config.
+- in your browser, http://localhost/IO/test_page.cgi
+
+9. Create eFolder db schema
+
+ 0. Your Program Location
+ - cd "your unzipped location"/DB_SCHEME
+ 1. Edit install.sh
+ - put your mysql password
+
+ 2. run install.sh
+ - ./install.sh 
+
+10. Create eFolder's Home.
+ - mkdir -p /eFolder
+ - chown -R www:www /eFolder
+
+11. Test UAS Account
+ <skip>
+
+12. Modify /opt/eFolder/etc/00.CONFIG
+ - CDatabasePassword
+
+13. Configure DDNS
+ 1. DDNS's config, /opt/eFolder/tmp/server.dat, with eFolder Server IP:
+ - A001FOLDER 
+ - A001DOWN 
+ - A001UP
+ 
+ - A002FOLDER 
+ - A002DOWN 
+ - A002UP
+
+ - A003FOLDER 
+ - A003DOWN 
+ - A003UP 
+ 
+
+ 2. Copy DDNS's config into /tmp
+ - cp /opt/eFolder/tmp/server.dat /tmp/server.dat
+
+ 3. Edit /opt/local/etc/LaunchDaemons/org.macports.apache2/apache2.wrapper  
+ - sudo vi /opt/local/etc/LaunchDaemons/org.macports.apache2/apache2.wrapper
+ ---------------------------------------------------------------------
+ Start()
+{
+	## eFolder: add following line
+        cp -f /opt/eFolder/tmp/* /tmp/
+	##
+        [ -x /opt/local/apache2/bin/apachectl ] && /opt/local/apache2/bin/apachectl start > /dev/null
+}
+ --------------------------------------------------------------------- 
+
+
+## D. Sphinx Service ##################################################
+ 1. Install SphinxSearch Engine
+ - sudo port install sphinx
+ - cd /opt/sphinx
+ - sudo -s
+ - mkdir bin var 
+ - ln -s /opt/local/etc/sphinx etc
+[x] - mkdir /opt/local/var/db/sphinx ; chown mysql:mysql /opt/local/var/db/sphinx
+[x] - mkdir /opt/local/var/db/sphinx ; chown mysql:mysql /opt/local/var/db/sphinx
+ - mkdir /opt/local/var/log/sphinx ; /opt/local/var/log/sphinx
+ - mkdir /opt/local/var/log/sphinx ; /opt/local/var/log/sphinx
+ - ln -s /opt/local/var/db/sphinx var/data
+ - ln -s /opt/local/var/db/sphinx var/db
+ - ln -s /opt/local/var/log/sphinx var/log
+  
+ 
+ 2. Edit Configuration
+ - sudo vi /opt/eFolder/etc/sphinx.conf, edit sql_pass, sql_sock 
+-----------------------------------------------------------------------------
+        sql_pass                                = <.... your password ...> 
+        sql_sock                                = /opt/local/var/run/mysql5/mysqld.sock
+-----------------------------------------------------------------------------
+
+- sudo cp /opt/eFolder/etc/sphinx.conf /opt/local/etc/sphinx/. 
+
+ 3. Indexer Helper update
+   1. sudo vi /opt/eFolder/etc/File_crawl.pl, edit $CDBPWD 
+
+ 4. Try Indexing
+   - cd /opt/eFolder/etc
+   - sudo -u mysql bash makeSphinxIndex.sh all
+   
+ 5. Start Sphinx
+   - cd <your unzipped location> 
+   - sudo cp -rfp mac/etc/LaunchDaemons/* /opt/local/etc/LaunchDaemons
+   - sudo /opt/local/etc/LaunchDaemons/org.macports.sphinx/sphinx.wrapper start  
+
+  - sudo ln -s /opt/local/etc/LaunchDaemons/org.macports.sphinx/org.macports.sphinx.plist /Library/LaunchDaemons/.
+
+  - sudo launchctl load -w  /Library/LaunchDaemons/org.macports.sphinx.plist
+
+ 6. Configure cron to index 
+
+   1. sudo crontab -e
+   -----------------------------------------------------------------
+   36 4 * * * ( cd /opt/eFolder/etc ; bash makeSphinxIndex.sh all 2> /dev/null )
+    * * * * * ( cd /opt/eFolder/etc ; bash makeSphinxIndex.sh delta 2> /dev/null )
+   ------------------------------------------ 
+   2. cron restart 
+
+
+## E. Account Manager, Web Admin ####################################
+ 1. Account Manager Install
+   0. Program Location
+   - cd "your unzipped location"/WEB
+   
+   1. Install
+   - tar -xzvfp eFolderAdmin-xxxx.tar.gz
+   - sudo mkdir -p /opt/local/var/www
+   - sudo cp -rfp eFolderAdmin-xxxx /opt/local/var/www/eFolderAdmin
+
+   2. Edit configuration
+   - cd /opt/local/var/www/eFolder
+   - sudo vi Config/setup.php
+	- $cfg->DbUser:  db login
+        - $cfg->DbPass:  db password
+	- $cfg->AdminUser: web admin account
+	- $cfg->AdminPass: web admin password
+	- $cfg->CookieDomain:  this server ip, or domain used for cookie  & auth
+
+   3. Configure apache/mod_php for Web Admin
+   - sudo vi /opt/local/apache/conf/httpd.conf
+   ------------------------------------------------------------------
+   #DocumentRoot "/opt/local/apache2/htdocs"
+   DocumentRoot "/opt/local/var/www"
+   <Directory />
+   Options FollowSymLinks
+   AllowOverride None
+   Order deny,allow
+   Deny from all
+   </Directory>
+   
+
+   <Directory "/opt/local/var/www">
+    #Options Indexes FollowSymLinks
+    Options FollowSymLinks
+
+    AllowOverride None
+
+    Order allow,deny
+    Allow from all
+
+   </Directory>
+
+
+   #PORT:  Change Following port number accordingly
+   Listen 80
+   ------------------------------------------------------------------
+
+   4. apache2 restart
+   - sudo /opt/local/apache/bin/apachectl restart
+
+
+   5. check with your web browser
+   - http://<your ip or domain>/eFolderAdmin/
+   - add test account with id: test, password: embian
+   (don't forget to delete this account after test)
+
+   
+
+   
+## F. Finalize (Check Everything) ####################################
+
+   Congrat.  Now check to see whether your installation is complete! 
+   We can do this by "actually using any eFolder client".
+
+   Option 1) Checking with eFolder Windows/Mac/Linux Java Client (your PC)
+   =========================================================================
+
+   1.  Download eFolder Client Application from http://efolder.embian.com/
+       for your platform. 
+
+   2.  Install application in your PC.  (ie execute windows .exe, mac .dmg,
+       or Linux .tar.gz, accordingly)  
+
+   3.  Start your application.  If not successful, try launch the
+       application again.  (this may happen
+       because the application might upgrade first) 
+
+   4.  When the login dialog pop up, please 3 fields:
+
+       login:  test 
+       password:  embian 
+       server: <your.ip.or.domain> or <your.ip.or.domain:port>
+
+
+   5.  If successful, try to create new folder under "Home" 
+   
+   6.  If successful, try to upload a file by drag-n-drop a file into 
+       the right pane. 
+
+   7.  If successful, try to download a file.
+   8.  If successful, try to search a file.
+
+   9.  All done.  
+
+
+   Option 2: DEBUG!) Checking with eFolder Command Line Client on the installed eFolder Server
+   =============================================================================
+   
+    1.  Install command line client (written in perl) in your server
+    sudo cp /opt/eFolder/bin/fp-x.x /opt/eFolder/bin/fp /opt/local/bin/.
+    sudo vi /opt/local/bin/fp, edit correct perl path, which is /opt/local/bin/perl
+    ---------------------------------
+    #!/opt/local/bin/perl
+
+    ---------------------------------
+
+    sudo chmod 755 /opt/local/bin/fp
+
+
+    2. Now configure fp
+    - just type "fp" in prompt to see what it can do (aka help)
+    fp  
+
+    - now config fp configuration by "fp config".  all of configuration is written
+      to ~/.fp
+
+    fp config server  <your server ip>
+	(if you changed the listen port, fp config port <your port>)
+    fp config login embian
+    fp config password test
+    fp config downdir ~/Desktop
+
+    3. Try "echo" to see whether your server is responding.
+    - fp echo "hello world?"
+    
+    4. Login 
+    - fp login 
+    If you cannot 
+    
+    5. List Directory 
+    - fp ls
+
+    6. Upload File
+    - fp up <full path to your file> 
+    - fp ls
+
+    7. Download File
+    - fp ls 
+      YOU will see something like this. 
+
+    http://192.168.2.129/FTPService
+--------------------------------------------------------------------------------
+total 4		Sort by  [] []  Time: 0.739565
+{00} ../	jaejunh:/
+
+{01}       125K 03-03 20:30	test.pptx
+{02}       1.1M 03-03 20:07	my.zip
+{03} dir    68  03-02 22:56	babo2/
+{04} dir   306  03-03 20:20	babo4/
+--------------------------------------------------------------------------------
+	
+    - fp down {01}
+      Then, the file, "test.pptx" will be downloaded into your downdir, ~/Desktop 
+      
+    8. you can try other command, such as fp find for search, etc.
+
+
+
+   
+
+

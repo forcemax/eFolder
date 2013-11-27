@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# MacPorts generated daemondo support script
+#
+
+#
+# Init
+#
+prefix=/opt/local
+
+#
+# Start
+#
+Start()
+{
+	/opt/local/share/mysql5/mysql/mysql.server start
+}
+
+#
+# Stop
+#
+Stop()
+{
+	/opt/local/share/mysql5/mysql/mysql.server stop
+}
+
+#
+# Restart
+#
+Restart()
+{
+	Stop
+	Start
+}
+
+#
+# Run
+#
+Run()
+{
+case $1 in
+  start  ) Start   ;;
+  stop   ) Stop    ;;
+  restart) Restart ;;
+  *      ) echo "$0: unknown argument: $1";;
+esac
+}
+
+#
+# Run a phase based on the selector
+#
+Run $1
+

@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd" >
+<plist version='1.0'>
+<dict>
+<key>Label</key><string>org.macports.sphinx</string>
+<key>ProgramArguments</key>
+<array>
+	<string>/opt/local/bin/daemondo</string>
+	<string>--label=sphinx</string>
+	<string>--start-cmd</string>
+	<string>/opt/local/etc/LaunchDaemons/org.macports.sphinx/sphinx.wrapper</string>
+	<string>start</string>
+	<string>;</string>
+	<string>--stop-cmd</string>
+	<string>/opt/local/etc/LaunchDaemons/org.macports.sphinx/sphinx.wrapper</string>
+	<string>stop</string>
+	<string>;</string>
+	<string>--restart-cmd</string>
+	<string>/opt/local/etc/LaunchDaemons/org.macports.sphinx/sphinx.wrapper</string>
+	<string>restart</string>
+	<string>;</string>
+	<string>--pid=none</string>
+</array>
+<key>Debug</key><false/>
+<key>Disabled</key><true/>
+<key>OnDemand</key><false/>
+</dict>
+</plist>

@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# MacPorts generated daemondo support script
+#
+
+#
+# Init
+#
+prefix=/opt/local
+
+#
+# Start
+#
+Start()
+{
+	/opt/local/bin/searchd 
+}
+
+#
+# Stop
+#
+Stop()
+{
+	/opt/local/bin/searchd --stop
+}
+
+#
+# Restart
+#
+Restart()
+{
+	Stop
+	Start
+}
+
+#
+# Run
+#
+Run()
+{
+case $1 in
+  start  ) Start   ;;
+  stop   ) Stop    ;;
+  restart) Restart ;;
+  *      ) echo "$0: unknown argument: $1";;
+esac
+}
+
+#
+# Run a phase based on the selector
+#
+Run $1
+

@@ -1,0 +1,73 @@
+#!/opt/local/bin/perl -w
+
+use strict;
+use DBI;
+
+my $CDBCNN = "DBI:mysql:host=127.0.0.1;database=UAS";
+my $CDBUSR = "root";
+my $CDBPWD = "tokky79";
+
+my $UAS_STARTNO = 10000;
+
+my $hDB = DBI->connect($CDBCNN, $CDBUSR, $CDBPWD);
+my $statement = $hDB->prepare("SET NAMES UTF8");
+$statement->execute() or die "ERROR\n";
+$statement->finish();
+$statement = $hDB->prepare("SET CHARACTER SET UTF8");
+$statement->execute() or die "ERROR\n";
+$statement->finish();
+
+sub listAccount {
+	my ($user,@rest) = @_;
+	my $strListAccount="select NAME_COL,'*',IDX_COL+10000,IDX_COL+10000,FLNAME_COL,HOMEDIR_COL,SHELL_COL from ACT_TBL";
+	if ($user) {
+		$strListAccount .= " where NAME_COL = '$user'";
+	}
+	my $sth = $hDB->prepare($strListAccount); 
+	$sth->execute() or die "ERROR\n";
+
+	while (my @row = $sth->fetchrow_array()) {
+		print join(":",@row), "\n";
+	}
+	$sth->finish();
+}
+
+sub deleteAccount {
+	my ($user,@rest) = @_;
+	my $strListAccount="delete from ACT_TBL ";
+	if ($user) {
+		$strListAccount .= " where NAME_COL = '$user'";
+	} else {
+		#print STDERR "woops! you cannot delete whole user account list!\n";
+		return ;
+	}
+	my $sth = $hDB->prepare($strListAccount); 
+	$sth->execute() or die "ERROR\n";
+	$sth->finish();
+}
+
+# NOT IMPLEMENTED
+sub addAccount;
+sub updateAccount;
+
+sub test {
+listAccount;
+listAccount "jaejunh";
+#listAccount "Admin";
+}
+
+
+sub main {
+	if ($#ARGV < 0) {
+		print STDERR "ERR:  Usage $0 listAccount|deleteAccount\n";
+	} elsif ($ARGV[0] eq "listAccount") {
+		listAccount($ARGV[1]);
+	} elsif ($ARGV[0] eq "deleteAccount") {
+		deleteAccount($ARGV[1]);
+	} else {
+		print STDERR "ERR: " . $ARGV[0] . " is  Wrong Command or Not Implemented!\n";
+	}
+}
+
+#test;
+main;

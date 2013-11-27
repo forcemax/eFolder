@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope 
+	xmlns:namesp2="http://xml.apache.org/xml-soap" 
+	SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" 
+	xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance" 
+	xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" 
+	xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" 
+	xmlns:xsd="http://www.w3.org/1999/XMLSchema">
+
+<SOAP-ENV:Body>
+	<namesp8:ReturnHashArrayResponse 
+		xmlns:namesp8="http://kerberos.embian.gnu/FTPService">
+		<s-gensym37 xsi:type="namesp2:SOAPStruct">
+			<Size xsi:type="xsd:int">0</Size>
+			<Type xsi:type="xsd:string">Dir</Type>
+			<name xsi:type="xsd:string">hi</name>
+		</s-gensym37>
+		<s-gensym39 xsi:type="namesp2:SOAPStruct">
+			<Size xsi:type="xsd:int">0</Size>
+			<Type xsi:type="xsd:string">File</Type>
+			<name xsi:type="xsd:string">hi2</name>
+		</s-gensym39>
+	</namesp8:ReturnHashArrayResponse>
+	</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

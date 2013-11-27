@@ -1,0 +1,94 @@
+<?php
+require_once("Modules/EmDataAccess.class.php");
+
+class EmUas(
+	function EmUas($user) {
+		global $cfg;
+		//$this->user = $user;
+		$this->gid = "100";
+		$this->uaschk = array();
+		$this->shell = $cfg->AccountShell;
+	}
+
+	function setUser($user) {
+		$this->user = $user;
+	}
+
+	function addUser($user, $passwd, $flag=false) {
+		$str = sprintf("UASClient addAccount %s %s", $user, $this->gid);
+		$this->execStr($str);
+		if (is_array($this->uaschk)) {
+			foreach ($this->uaschk as $k=>$v) {
+				if ($v==false) {
+					$res = "UAS 등록 실패";
+					break;
+				}
+			}
+		}
+		if ($res) return $res;
+
+		$res = $this->updatePasswd($user, $passwd);
+		if ($res) return $res;
+
+		$res = $this->updateShell($user, $flag);
+
+		return $res;
+	}
+
+	function deleteUser($user) {
+		$str = sprintf("UASClient deleteAccount %s", $user);
+		$this->execStr($str);
+		if (is_array($this->uaschk)) {
+			foreach ($this->uaschk as $k=>$v) {
+				if ($v==false) {
+					$res = "UAS 삭제 실패";
+					break;
+				}
+			}
+		}
+		return $res;
+	}
+
+	function updatePasswd($user, $passwd) {
+		$str = sprintf("UASClient updateAccountPassword %s %s", $user, $passwd);
+		$this->execStr($str);
+		if (is_array($this->uaschk)) {
+			foreach ($this->uaschk as $k=>$v) {
+				if ($v==false) {
+					$res = "UAS 비밀번호 등록 실패";
+					break;
+				}
+			}
+		}
+		return $res;
+	}
+
+	function updateShell($user, $flag) {
+		$shell = $this->shell;
+		if ($falg == true) $shell = "/bin/bash";
+
+		$str = sprintf("UASClient updateAccountShell %s %s", $user, $shell);
+		$this->execStr($str);
+		if (is_array($this->uaschk)) {
+			foreach ($this->uaschk as $k=>$v) {
+				if ($v==false) {
+					$res = "UAS Shell 등록 실패";
+					break;
+				}
+			}
+		}
+		return $res;
+	}
+
+	function execStr($str) {
+		$this->uaschk = array();
+		exec("ssh $cfg->sshport root@localhost '".$str."'", $trash);
+		while (list($key,$val)=each($trash)) {
+			if (!preg_match("/OK/i",$val)) {
+				$this->uaschk[] = false;
+				break;
+			}
+		}
+	}
+}
+?>

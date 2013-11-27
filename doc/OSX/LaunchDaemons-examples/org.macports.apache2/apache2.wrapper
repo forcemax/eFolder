@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# MacPorts generated daemondo support script
+#
+
+#
+# Init
+#
+prefix=/opt/local
+
+#
+# Start
+#
+Start()
+{
+	cp -f /opt/eFolder/tmp/* /tmp/
+	[ -x /opt/local/apache2/bin/apachectl ] && /opt/local/apache2/bin/apachectl start > /dev/null
+}
+
+#
+# Stop
+#
+Stop()
+{
+	[ -r /opt/local/apache2/logs/httpd.pid ] && /opt/local/apache2/bin/apachectl stop > /dev/null
+}
+
+#
+# Restart
+#
+Restart()
+{
+	/opt/local/apache2/bin/apachectl restart > /dev/null
+}
+
+#
+# Run
+#
+Run()
+{
+case $1 in
+  start  ) Start   ;;
+  stop   ) Stop    ;;
+  restart) Restart ;;
+  *      ) echo "$0: unknown argument: $1";;
+esac
+}
+
+#
+# Run a phase based on the selector
+#
+Run $1
+

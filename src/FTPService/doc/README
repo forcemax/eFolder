@@ -1,0 +1,9 @@
+ReStart at 2008/1/15
+ -- Managed by jslee
+
+
+Start at 2002/10/18 
+
+* File Owner Problem: 
+	- mkdir service make file owner hjpark.root 
+	I want to make file owner hjpark.hjpark

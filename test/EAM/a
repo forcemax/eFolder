@@ -1,0 +1,54 @@
+-- MySQL dump 10.11
+--
+-- Host: db.embian.com    Database: eAccountManager
+-- ------------------------------------------------------
+-- Server version	5.0.45-Debian_1ubuntu3.1-log
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `account_tbl`
+--
+
+DROP TABLE IF EXISTS `account_tbl`;
+CREATE TABLE `account_tbl` (
+  `idx_col` int(10) unsigned NOT NULL auto_increment,
+  `username_col` varchar(32) NOT NULL default '',
+  `quota_col` int(11) NOT NULL default '0',
+  `server_col` varchar(16) NOT NULL default '',
+  `partition_col` varchar(8) NOT NULL default '',
+  `sharetype_col` int(11) default '2',
+  `sharepassword_col` varchar(254) default NULL,
+  PRIMARY KEY  (`idx_col`,`username_col`),
+  KEY `at_username_idx` (`username_col`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `account_tbl`
+--
+
+LOCK TABLES `account_tbl` WRITE;
+/*!40000 ALTER TABLE `account_tbl` DISABLE KEYS */;
+INSERT INTO `account_tbl` VALUES (0,'jslee',1048576,'222.122.186.173','/vicepa',3,'1234'),(1,'jslee123',1048576,'222.122.186.173','/vicepa',3,'2345'),(2,'eastroot',1048576,'222.122.186.173','/vicepa',1,NULL),(3,'aqua',1048576,'222.122.186.173','/vicepa',1,NULL),(4,'chunsj',1048576,'222.122.186.173','/vicepa',1,NULL),(5,'toy7777',1048576,'222.122.186.173','/vicepa',1,NULL),(6,'forcemax',1048576,'222.122.186.173','/vicepa',1,NULL),(7,'funnyjin',1048576,'222.122.186.173','/vicepa',1,NULL),(8,'jaejunh',1048576,'222.122.186.173','/vicepa',1,NULL),(9,'jaeronge',1048576,'222.122.186.173','/vicepa',1,NULL),(10,'lemoncha',1048576,'222.122.186.173','/vicepa',1,NULL),(11,'shkim',1048576,'222.122.186.173','/vicepa',1,NULL),(12,'sunyoung',1048576,'222.122.186.173','/vicepa',1,NULL),(13,'yam',1048576,'222.122.186.173','/vicepa',1,NULL),(14,'zenit',1048576,'222.122.186.173','/vicepa',1,NULL),(15,'testuser',0,'222.122.186.173','/vicepa',2,NULL),(16,'team-efolder',0,'222.122.186.173','/vicepa',3,'1234'),(17,'embian-all',0,'222.122.186.173','/vicepa',2,NULL),(18,'team-naro',0,'222.122.186.173','/vicepa',2,NULL),(19,'team-dm',0,'222.122.186.173','/vicepa',2,NULL);
+/*!40000 ALTER TABLE `account_tbl` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2008-02-01  6:42:51
