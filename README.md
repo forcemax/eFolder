@@ -1,7 +1,7 @@
-eFolder
+Embian eFolder
 =======
 
-#[Embian eFolder](http://efolder.embian.com)'s server source code repository.
+This repository contains the server source code for [Embian eFolder](http://efolder.embian.com).
 
 ## How to download it
 
